@@ -1,0 +1,9 @@
+[package]
+name = "football-domain"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+time = { version = "=0.3.47", default-features = false, features = ["std"] }
+uuid = { version = "1", default-features = false, features = ["std"] }

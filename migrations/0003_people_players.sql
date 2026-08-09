@@ -1,0 +1,20 @@
+CREATE TABLE persons (
+    id UUID PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT persons_name_not_blank CHECK (char_length(btrim(name)) > 0)
+);
+
+CREATE TABLE players (
+    id UUID PRIMARY KEY,
+    person_id UUID NOT NULL REFERENCES persons(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE team_player_assignments (
+    player_id UUID PRIMARY KEY REFERENCES players(id),
+    team_id UUID NOT NULL REFERENCES teams(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

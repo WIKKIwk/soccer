@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/domain",
+    "crates/application",
+    "crates/infrastructure",
+    "crates/contracts",
+    "crates/platform",
+    "crates/testkit",
+    "apps/admin-api",
+    "apps/footballctl",
+]

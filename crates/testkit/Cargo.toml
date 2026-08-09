@@ -1,0 +1,8 @@
+[package]
+name = "football-testkit"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+football-domain = { path = "../domain" }

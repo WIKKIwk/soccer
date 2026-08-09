@@ -1077,57 +1077,62 @@ This roadmap contains 52 ordered weekly blocks. Week numbers express dependency 
 
 ### Week 1 — Product contract and vocabulary
 
-- [ ] `P0-001` Name the first competition and season.
-- [ ] `P0-002` Confirm C1 as the first release coverage.
-- [ ] `P0-003` Identify operator, supervisor, and administrator roles.
-- [ ] `P0-004` List the minimum public mobile screens.
-- [ ] `P0-005` Define club, team, squad, lineup, fixture, match, stage, round, and tie.
-- [ ] `P0-006` Confirm the initial C1 commands and events.
-- [ ] `P0-007` Write the first end-to-end acceptance scenario.
-- [ ] `P0-008` Record explicit first-release exclusions.
+- [x] `P0-001` Name the first competition and season.
+- [x] `P0-002` Confirm C1 as the first release coverage.
+- [x] `P0-003` Identify operator, supervisor, and administrator roles.
+- [x] `P0-004` List the minimum public mobile screens.
+- [x] `P0-005` Define club, team, squad, lineup, fixture, match, stage, round, and tie.
+- [x] `P0-006` Confirm the initial C1 commands and events.
+- [x] `P0-007` Write the first end-to-end acceptance scenario.
+- [x] `P0-008` Record explicit first-release exclusions.
 
 Gate: the complete path from fixture creation to verified result is understandable to the buyer and developer.
+Gate status: Passed on 2026-08-08. Product authority, roles, clients/locales, minimum public screens, canonical vocabulary, C1 commands/events, acceptance flow, and first-release exclusions are recorded in `docs/decisions/P0-001-product-contract.md`, `P0-004-mobile-screen-scope.md`, `P0-005-domain-vocabulary.md`, and `P0-006-c1-commands-events.md`.
 
 ### Week 2 — Architecture decisions
 
-- [ ] `ARC-001` Confirm the modular-monolith boundary.
-- [ ] `ARC-002` Confirm partial event sourcing for match behavior.
-- [ ] `ARC-003` Select the UUID strategy.
-- [ ] `ARC-004` Confirm UTC and timezone rules.
-- [ ] `ARC-005` Define the error taxonomy.
-- [ ] `ARC-006` Define API versioning rules.
-- [ ] `ARC-007` Define forward-only migration policy.
-- [ ] `ARC-008` Freeze command/event/version semantics from Section 9.
-- [ ] `ARC-009` Freeze synchronous/asynchronous projection boundaries.
+- [x] `ARC-001` Confirm the modular-monolith boundary.
+- [x] `ARC-002` Confirm partial event sourcing for match behavior.
+- [x] `ARC-003` Select the UUID strategy.
+- [x] `ARC-004` Confirm UTC and timezone rules.
+- [x] `ARC-005` Define the error taxonomy.
+- [x] `ARC-006` Define API versioning rules.
+- [x] `ARC-007` Define forward-only migration policy.
+- [x] `ARC-008` Freeze command/event/version semantics from Section 9.
+- [x] `ARC-009` Freeze synchronous/asynchronous projection boundaries.
 
 Gate: implementation does not need to guess foundational semantics.
+Gate status: Passed on 2026-08-08. Modular boundary, partial event sourcing, UUID strategy, UTC/timezone rules, error taxonomy, API versioning, migration policy, command/event/version semantics, and projection boundaries are recorded in `docs/decisions/ARC-001-modular-monolith-boundary.md` through `ARC-009-projection-boundaries.md`.
 
 ### Week 3 — Cargo and PostgreSQL skeleton
 
-- [ ] `FND-001` Inspect repository and source-control ownership before initialization.
-- [ ] `FND-002` Create the root Cargo workspace.
-- [ ] `FND-003` Create only the domain, application, infrastructure, contracts, platform, and testkit crates needed by the first slice.
-- [ ] `FND-004` Create the minimal admin API binary.
-- [ ] `FND-005` Define Rust toolchain policy.
-- [ ] `FND-006` Define formatting and lint policy.
-- [ ] `DB-001` Define the local PostgreSQL connection contract.
-- [ ] `DB-002` Configure the connection pool.
-- [ ] `DB-003` Establish migration naming and execution.
-- [ ] `DB-004` Add clean-database migration verification.
+- [x] `FND-001` Inspect repository and source-control ownership before initialization.
+- [x] `FND-002` Create the root Cargo workspace.
+- [x] `FND-003` Create only the domain, application, infrastructure, contracts, platform, and testkit crates needed by the first slice.
+- [x] `FND-004` Create the minimal admin API binary.
+- [x] `FND-005` Define Rust toolchain policy.
+- [x] `FND-006` Define formatting and lint policy.
+- [x] `DB-001` Define the local PostgreSQL connection contract.
+- [x] `DB-002` Configure the connection pool.
+- [x] `DB-003` Establish migration naming and execution.
+- [x] `DB-004` Add clean-database migration verification.
 
 Gate: the empty vertical skeleton builds, tests, connects to PostgreSQL, and applies migrations.
+Gate status: Passed on 2026-08-09. The clean migration fixture and all current
+PostgreSQL integration fixtures ran against dedicated project test databases;
+existing databases were not modified.
 
 ### Week 4 — Configuration, errors, health, and minimal actor
 
-- [ ] `FND-008` Implement typed configuration.
-- [ ] `FND-009` Validate required environment values.
-- [ ] `FND-010` Redact secrets from debug output.
-- [ ] `FND-011` Implement shared application errors.
-- [ ] `FND-012` Map application errors to HTTP.
-- [ ] `FND-013` Add structured logging.
-- [ ] `FND-014` Add request IDs.
-- [ ] `FND-015` Add liveness and database readiness.
-- [ ] `IDN-001` Define `AdminUserId` and minimal actor identity.
+- [x] `FND-008` Implement typed configuration.
+- [x] `FND-009` Validate required environment values.
+- [x] `FND-010` Redact secrets from debug output.
+- [x] `FND-011` Implement shared application errors.
+- [x] `FND-012` Map application errors to HTTP.
+- [x] `FND-013` Add structured logging.
+- [x] `FND-014` Add request IDs.
+- [x] `FND-015` Add liveness and database readiness.
+- [x] `IDN-001` Define `AdminUserId` and minimal actor identity.
 - [ ] `IDN-002` Persist one active administrator for the vertical slice.
 
 Gate: the process fails clearly on invalid configuration and can authenticate or inject one controlled development administrator without bypassing application boundaries.
@@ -1136,50 +1141,59 @@ Gate: the process fails clearly on invalid configuration and can authenticate or
 
 ### Week 5 — Minimal directory, competition, fixture, and lineup
 
-- [ ] `DIR-001` Define minimal team identity and name.
+- [x] `DIR-001` Define minimal team identity and name.
 - [ ] `DIR-002` Persist two teams.
-- [ ] `DIR-003` Define minimal person/player identity.
+- [x] `DIR-003` Define minimal person/player identity.
 - [ ] `DIR-004` Persist players assigned to teams.
-- [ ] `CMP-001` Define minimal competition and season.
-- [ ] `SCH-001` Define one fixture with home, away, and kickoff.
-- [ ] `LIN-001` Define starter and substitute entries.
-- [ ] `LIN-002` Validate that one player cannot appear twice.
+- [x] `CMP-001` Define minimal competition and season.
+- [x] `SCH-001` Define one fixture with home, away, and kickoff.
+- [x] `LIN-001` Define starter and substitute entries.
+- [x] `LIN-002` Validate that one player cannot appear twice.
 - [ ] `LIN-003` Persist and load a draft lineup.
 
 Gate: one valid fixture with two valid lineups can be created through application services.
 
 ### Week 6 — Match aggregate and clock
 
-- [ ] `MCH-001` Create match identity from a fixture.
-- [ ] `MCH-002` Define the initial match states.
-- [ ] `MCH-003` Define the `MatchAggregate` boundary.
-- [ ] `MCH-004` Define aggregate version semantics.
-- [ ] `MCH-005` Define command result and domain event envelopes.
-- [ ] `MCH-006` Implement pre-match and lineup-confirmed transitions.
-- [ ] `CLK-001` Define period and clock value objects.
-- [ ] `CLK-002` Implement start, pause, resume, and correction.
-- [ ] `CLK-003` Use an injected clock port.
-- [ ] `MCH-007` Implement first-half, half-time, second-half, and finish transitions.
+- [x] `MCH-001` Create match identity from a fixture.
+- [x] `MCH-002` Define the initial match states.
+- [x] `MCH-003` Define the `MatchAggregate` boundary.
+- [x] `MCH-004` Define aggregate version semantics.
+- [x] `MCH-005` Define command result and domain event envelopes.
+- [x] `MCH-006` Implement pre-match and lineup-confirmed transitions.
+- [x] `CLK-001` Define period and clock value objects.
+- [x] `CLK-002` Implement start, pause, resume, and correction.
+- [x] `CLK-003` Use an injected clock port.
+- [x] `MCH-007` Implement first-half, half-time, second-half, and finish transitions.
 
 Gate: a database-free aggregate test runs a match from confirmed lineups to finished state.
 
 ### Week 7 — Logical command store, event store, and C1 actions
 
-- [ ] `CMD-001` Define logical command identity and request fingerprint.
-- [ ] `CMD-002` Define final rejection and retryable failure semantics.
-- [ ] `CMD-003` Implement the short command-admission transaction.
-- [ ] `CMD-004` Reject same command ID with a different fingerprint.
-- [ ] `CMD-007` Persist accepted or rejected terminal command results.
-- [ ] `EVT-001` Create the canonical match-event migration.
-- [ ] `EVT-002` Implement event schema versioning.
-- [ ] `EVT-003` Load an event stream.
-- [ ] `EVT-004` Append multiple events with expected version.
-- [ ] `EVT-005` Persist causation command ID and event index.
-- [ ] `EVT-006` Implement goal, yellow/red card, and substitution events.
-- [ ] `PRJ-001` Implement synchronous score and timeline reduction.
-- [ ] `EVT-007` Test duplicate and concurrent commands.
+- [x] `CMD-001` Define logical command identity and request fingerprint.
+- [x] `CMD-002` Define final rejection and retryable failure semantics.
+- [x] `CMD-003` Implement the short command-admission transaction.
+- [x] `CMD-004` Reject same command ID with a different fingerprint.
+- [x] `CMD-007` Persist accepted or rejected terminal command results.
+- [x] `EVT-001` Create the canonical match-event migration.
+- [x] `EVT-002` Implement event schema versioning.
+- [x] `EVT-003` Load an event stream.
+- [x] `EVT-004` Append multiple events with expected version.
+- [x] `EVT-005` Persist causation command ID and event index.
+- [x] `EVT-006` Implement goal, yellow/red card, and substitution events.
+- [x] `PRJ-001` Implement synchronous score and timeline reduction.
+- [x] `EVT-007` Test duplicate and concurrent commands.
 
 Gate: canonical C1 events persist atomically and replay to the same state.
+Gate status: Passed on 2026-08-09. Dedicated clean-database fixtures verified
+canonical append/load, terminal-result evidence, typed payload round-trip,
+expected-version concurrency, duplicate-command admission, and the
+application-orchestrator fingerprint-conflict path. The application admission
+fixture also verified matching terminal replay returns the persisted result
+without invoking execution. The C1 application execution fixture additionally
+verified accepted event plus terminal-result commit and deterministic rejected
+command persistence without a second canonical event, including the matching
+accepted/rejected command-audit rows.
 
 ### Week 8 — Admin API, footballctl, correction, and public REST
 
@@ -1188,9 +1202,9 @@ Gate: canonical C1 events persist atomically and replay to the same state.
 - [ ] `API-001` Add lineup, start-period, goal, card, substitution, and finish endpoints.
 - [ ] `CLI-001` Create `footballctl` configuration and authentication adapter.
 - [ ] `CLI-002` Add fixture, lineup, start, goal, card, substitution, and finish commands.
-- [ ] `COR-001` Implement correction reason and void event.
-- [ ] `COR-002` Implement an effective event-stream builder.
-- [ ] `COR-003` Rebuild score after a voided goal.
+- [x] `COR-001` Implement correction reason and void event.
+- [x] `COR-002` Implement an effective event-stream builder.
+- [x] `COR-003` Rebuild score after a voided goal.
 - [ ] `PUB-001` Add minimal match-detail and timeline REST endpoints.
 - [ ] `PIL-001` Execute the complete vertical-slice acceptance fixture.
 
@@ -1245,10 +1259,10 @@ Gate: clubs, teams, persons, players, and historical squad membership are querya
 ### Week 13 — Competition and season lifecycle
 
 - [ ] `CMP-002` Add competition types and status lifecycle.
-- [ ] `CMP-003` Add competition migration and repository.
+- [x] `CMP-003` Add competition migration and repository.
 - [ ] `CMP-004` Add competition admin commands.
 - [ ] `CMP-005` Model season date interval.
-- [ ] `CMP-006` Add season migration and repository.
+- [x] `CMP-006` Add season migration and repository.
 - [ ] `CMP-007` Define overlapping-season policy.
 
 ### Week 14 — Stage, group, round, and rules
@@ -1305,27 +1319,27 @@ Gate: the initial league model and realistic C1 match lifecycle support ordinary
 - [ ] `AUD-001` Harden audit schema and actor metadata.
 - [ ] `AUD-002` Verify atomic business audit.
 - [ ] `CMD-005` Add persisted response retrieval for duplicate commands.
-- [ ] `CMD-006` Add stale-processing recovery semantics.
+- [x] `CMD-006` Add stale-processing recovery semantics.
 
 ### Week 19 — Operator assignment and lease
 
-- [ ] `OPS-001` Model match assignment.
-- [ ] `OPS-002` Model operator lease.
-- [ ] `OPS-003` Implement claim.
-- [ ] `OPS-004` Implement heartbeat.
-- [ ] `OPS-005` Implement release and takeover.
-- [ ] `OPS-006` Define lease expiry.
-- [ ] `OPS-007` Add two-operator concurrency tests.
+- [x] `OPS-001` Model match assignment.
+- [x] `OPS-002` Model operator lease.
+- [x] `OPS-003` Implement claim.
+- [x] `OPS-004` Implement heartbeat.
+- [x] `OPS-005` Implement release and takeover.
+- [x] `OPS-006` Define lease expiry.
+- [x] `OPS-007` Add two-operator concurrency tests.
 
 ### Week 20 — Verification and evidence minimum
 
-- [ ] `QUA-001` Model provisional and verified state.
-- [ ] `QUA-002` Enforce supervisor permissions.
-- [ ] `QUA-003` Implement match verification.
-- [ ] `QUA-004` Implement reasoned match reopen.
-- [ ] `SRC-001` Model a safe evidence reference.
-- [ ] `QUA-005` Audit correction and verification decisions.
-- [ ] `QUA-006` Add unauthorized-workflow tests.
+- [x] `QUA-001` Model provisional and verified state.
+- [x] `QUA-002` Enforce supervisor permissions.
+- [x] `QUA-003` Implement match verification.
+- [x] `QUA-004` Implement reasoned match reopen.
+- [x] `SRC-001` Model a safe evidence reference.
+- [x] `QUA-005` Audit correction and verification decisions.
+- [x] `QUA-006` Add unauthorized-workflow tests.
 
 Gate: authenticated operators manage only assigned matches and supervisors verify or reopen results with evidence and audit.
 
@@ -1333,19 +1347,19 @@ Gate: authenticated operators manage only assigned matches and supervisors verif
 
 ### Week 21 — Match read models
 
-- [ ] `PRJ-002` Create match-summary projection schema.
-- [ ] `PRJ-003` Create timeline projection schema.
-- [ ] `PRJ-004` Create lineup projection schema.
-- [ ] `PRJ-005` Store projection and aggregate versions.
-- [ ] `PRJ-006` Implement full match projection rebuild.
-- [ ] `PRJ-007` Add event/projection consistency tests.
+- [x] `PRJ-002` Create match-summary projection schema.
+- [x] `PRJ-003` Create timeline projection schema.
+- [x] `PRJ-004` Create lineup projection schema.
+- [x] `PRJ-005` Store projection and aggregate versions.
+- [x] `PRJ-006` Implement full match projection rebuild.
+- [x] `PRJ-007` Add event/projection consistency tests.
 
 ### Week 22 — Standings engine and revisions
 
-- [ ] `STD-001` Define verified-result input contract.
-- [ ] `STD-002` Reduce played, won, drawn, and lost.
-- [ ] `STD-003` Reduce goals and points.
-- [ ] `STD-004` Implement configurable tiebreak comparison.
+- [x] `STD-001` Define verified-result input contract.
+- [x] `STD-002` Reduce played, won, drawn, and lost.
+- [x] `STD-003` Reduce goals and points.
+- [x] `STD-004` Implement configurable tiebreak comparison.
 - [ ] `STD-005` Add season `results_revision`.
 - [ ] `STD-006` Store `computed_results_revision` in standings.
 - [ ] `STD-007` Rebuild standings after corrected result.
@@ -1419,41 +1433,41 @@ Gate: bulk setup, duplicate review, evidence, and quality workflows support real
 
 ### Week 29 — Transactional outbox
 
-- [ ] `OUT-001` Create outbox schema.
-- [ ] `OUT-002` Define versioned integration-event envelope.
-- [ ] `OUT-003` Insert outbox messages in command transactions.
-- [ ] `OUT-004` Implement worker claim with safe locking.
-- [ ] `OUT-005` Define retry and backoff.
-- [ ] `OUT-006` Define poison-message handling.
-- [ ] `OUT-007` Test commit and publish failures.
+- [x] `OUT-001` Create outbox schema.
+- [x] `OUT-002` Define versioned integration-event envelope.
+- [x] `OUT-003` Insert outbox messages in command transactions.
+- [x] `OUT-004` Implement worker claim with safe locking.
+- [x] `OUT-005` Define retry and backoff.
+- [x] `OUT-006` Define poison-message handling.
+- [x] `OUT-007` Test commit and publish failures.
 
 ### Week 30 — WebSocket protocol
 
-- [ ] `RT-001` Define topic names.
-- [ ] `RT-002` Implement monotonic per-topic sequence.
-- [ ] `RT-003` Define subscribe and unsubscribe contracts.
-- [ ] `RT-004` Define topic authorization.
-- [ ] `RT-005` Publish match notifications.
-- [ ] `RT-006` Make duplicate delivery safe.
-- [ ] `RT-007` Add connection heartbeat and limits.
+- [x] `RT-001` Define topic names.
+- [x] `RT-002` Implement monotonic per-topic sequence.
+- [x] `RT-003` Define subscribe and unsubscribe contracts.
+- [x] `RT-004` Define topic authorization.
+- [x] `RT-005` Publish match notifications.
+- [x] `RT-006` Make duplicate delivery safe.
+- [x] `RT-007` Add connection heartbeat and limits.
 
 ### Week 31 — Reconnect and synchronization
 
-- [ ] `RT-008` Accept last-known sequence.
-- [ ] `RT-009` Define retained-message window.
-- [ ] `RT-010` Detect gaps.
-- [ ] `RT-011` Return snapshot-required response.
-- [ ] `RT-012` Integrate canonical REST snapshot.
-- [ ] `RT-013` Add reconnect integration tests.
+- [x] `RT-008` Accept last-known sequence.
+- [x] `RT-009` Define retained-message window.
+- [x] `RT-010` Detect gaps.
+- [x] `RT-011` Return snapshot-required response.
+- [x] `RT-012` Integrate canonical REST snapshot.
+- [x] `RT-013` Add reconnect integration tests.
 
 ### Week 32 — Corrections and projection delivery
 
-- [ ] `RT-014` Distribute correction notifications.
-- [ ] `RT-015` Distribute verification changes.
-- [ ] `RT-016` Distribute standings revision changes.
-- [ ] `RT-017` Test worker restart and duplicate delivery.
-- [ ] `RT-018` Test correction during a live match.
-- [ ] `RT-019` Measure end-to-end fanout latency.
+- [x] `RT-014` Distribute correction notifications.
+- [x] `RT-015` Distribute verification changes.
+- [x] `RT-016` Distribute standings revision changes.
+- [x] `RT-017` Test worker restart and duplicate delivery.
+- [x] `RT-018` Test correction during a live match.
+- [x] `RT-019` Measure end-to-end fanout latency.
 
 Gate: committed changes reach clients safely, and reconnect cannot silently lose canonical state.
 
@@ -1461,10 +1475,10 @@ Gate: committed changes reach clients safely, and reconnect cannot silently lose
 
 ### Week 33 — footballctl setup workflows
 
-- [ ] `CLI-003` Add competition and season commands.
-- [ ] `CLI-004` Add team and player import commands.
-- [ ] `CLI-005` Add fixture scheduling commands.
-- [ ] `CLI-006` Add assignment and claim commands.
+- [x] `CLI-003` Add competition and season commands.
+- [x] `CLI-004` Add team and player import commands.
+- [x] `CLI-005` Add fixture scheduling commands.
+- [x] `CLI-006` Add assignment and claim commands.
 - [ ] `CLI-007` Add correction, void, verification, and replay commands.
 - [ ] `CLI-008` Add safe output and stable exit codes.
 - [ ] `CLI-009` Add CLI integration smoke tests.
@@ -1813,15 +1827,15 @@ Acceptance criteria:
 
 | Milestone | Status |
 |---|---|
-| Product contract | Not started |
-| Architecture decisions | Not started |
+| Product contract | Completed |
+| Architecture decisions | Completed |
 | First vertical slice | Not started |
 | Directory hardening | Not started |
 | Competition/scheduling hardening | Not started |
 | Identity/operator workflow | Not started |
-| Read models/standings | Not started |
+| Read models/standings | In progress |
 | Import/quality | Not started |
-| Outbox/realtime | Not started |
+| Outbox/realtime | In progress |
 | Operator workflow hardening | Not started |
 | Reliability/operations | Not started |
 | Pilot/core acceptance | Not started |

@@ -1,0 +1,18 @@
+[package]
+name = "football-infrastructure"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+football-application = { path = "../application" }
+football-contracts = { path = "../contracts" }
+football-domain = { path = "../domain" }
+football-platform = { path = "../platform" }
+sqlx = { version = "0.9", default-features = false, features = ["postgres", "runtime-tokio", "tls-rustls-ring", "migrate", "uuid", "time", "json", "derive"] }
+serde_json = "1"
+time = { version = "=0.3.47", default-features = false, features = ["std"] }
+uuid = { version = "1", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

@@ -1,0 +1,15 @@
+[package]
+name = "football-application"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+football-contracts = { path = "../contracts" }
+football-domain = { path = "../domain" }
+serde_json = "1"
+sha2 = "0.10"
+uuid = { version = "1", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
