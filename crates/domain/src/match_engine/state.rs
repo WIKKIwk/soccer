@@ -26,6 +26,43 @@ impl MatchState {
         Self::Draft
     }
 
+    /// Returns the stable vocabulary used by persisted match state.
+    pub const fn as_persisted_str(self) -> &'static str {
+        match self {
+            Self::Draft => "draft",
+            Self::Scheduled => "scheduled",
+            Self::PreMatch => "pre_match",
+            Self::LineupsProvisional => "lineups_provisional",
+            Self::LineupsConfirmed => "lineups_confirmed",
+            Self::FirstHalf => "first_half",
+            Self::HalfTime => "half_time",
+            Self::SecondHalf => "second_half",
+            Self::Interrupted => "interrupted",
+            Self::Finished => "finished",
+            Self::Postponed => "postponed",
+            Self::Cancelled => "cancelled",
+        }
+    }
+
+    /// Parses only the canonical persisted lifecycle vocabulary.
+    pub fn try_from_persisted_str(value: &str) -> Option<Self> {
+        match value {
+            "draft" => Some(Self::Draft),
+            "scheduled" => Some(Self::Scheduled),
+            "pre_match" => Some(Self::PreMatch),
+            "lineups_provisional" => Some(Self::LineupsProvisional),
+            "lineups_confirmed" => Some(Self::LineupsConfirmed),
+            "first_half" => Some(Self::FirstHalf),
+            "half_time" => Some(Self::HalfTime),
+            "second_half" => Some(Self::SecondHalf),
+            "interrupted" => Some(Self::Interrupted),
+            "finished" => Some(Self::Finished),
+            "postponed" => Some(Self::Postponed),
+            "cancelled" => Some(Self::Cancelled),
+            _ => None,
+        }
+    }
+
     pub fn is_live_period(self) -> bool {
         matches!(self, Self::FirstHalf | Self::SecondHalf)
     }
@@ -149,6 +186,32 @@ impl MatchLifecycle {
 #[cfg(test)]
 mod tests {
     use super::{MatchLifecycle, MatchState, MatchTransitionError};
+
+    #[test]
+    fn persisted_state_vocabulary_round_trips_without_aliases() {
+        let states = [
+            MatchState::Draft,
+            MatchState::Scheduled,
+            MatchState::PreMatch,
+            MatchState::LineupsProvisional,
+            MatchState::LineupsConfirmed,
+            MatchState::FirstHalf,
+            MatchState::HalfTime,
+            MatchState::SecondHalf,
+            MatchState::Interrupted,
+            MatchState::Finished,
+            MatchState::Postponed,
+            MatchState::Cancelled,
+        ];
+
+        for state in states {
+            assert_eq!(
+                MatchState::try_from_persisted_str(state.as_persisted_str()),
+                Some(state)
+            );
+        }
+        assert_eq!(MatchState::try_from_persisted_str("FIRST_HALF"), None);
+    }
 
     #[test]
     fn new_lifecycle_starts_at_the_canonical_initial_state() {

@@ -10,6 +10,7 @@ use crate::match_event_payloads::{MatchEventPayloadCodecError, encode_match_even
 use crate::outbox::{
     OutboxMessage, OutboxMessageError, OutboxRepositoryError, persist_outbox_message,
 };
+use crate::synchronous_match_state::{SynchronousMatchStateError, persist_synchronous_match_state};
 use football_application::commands::{
     CommandExecutionContext, CommandExecutionPort, into_persisted_command_result,
 };
@@ -49,13 +50,13 @@ impl C1LiveActionResult {
 /// Failure while composing the current C1 application execution boundary.
 ///
 /// The transaction owns canonical event persistence, the command audit, one
-/// versioned match-event outbox message, and the terminal command result in
-/// this increment. Critical synchronous state and outbox delivery remain
-/// separate later boundaries.
+/// critical synchronous state, one versioned match-event outbox message, and
+/// the terminal command result in this increment.
 #[derive(Debug)]
 pub enum C1LiveActionCommandExecutionError {
     Database(SqlxError),
     EventTransaction(C1LiveActionExecutionError),
+    SynchronousState(SynchronousMatchStateError),
     AuditEntry(CommandAuditEntryError),
     AuditRepository(CommandAuditRepositoryError),
     OutboxEncoding(MatchEventPayloadCodecError),
@@ -75,6 +76,9 @@ impl fmt::Display for C1LiveActionCommandExecutionError {
             }
             Self::EventTransaction(error) => {
                 write!(formatter, "C1 command event transaction failed: {error}")
+            }
+            Self::SynchronousState(error) => {
+                write!(formatter, "C1 command synchronous state failed: {error}")
             }
             Self::AuditEntry(error) => {
                 write!(formatter, "C1 command audit entry is invalid: {error}")
@@ -106,6 +110,7 @@ impl std::error::Error for C1LiveActionCommandExecutionError {
         match self {
             Self::Database(error) => Some(error),
             Self::EventTransaction(error) => Some(error),
+            Self::SynchronousState(error) => Some(error),
             Self::AuditEntry(error) => Some(error),
             Self::AuditRepository(error) => Some(error),
             Self::OutboxEncoding(error) => Some(error),
@@ -125,6 +130,23 @@ impl C1LiveActionCommandExecutionError {
                 "the C1 command execution dependency is unavailable",
             ),
             Self::EventTransaction(error) => error.to_application_error(),
+            Self::SynchronousState(SynchronousMatchStateError::Database(_)) => {
+                ApplicationError::new(
+                    ErrorCode::DependencyDatabaseUnavailable,
+                    "the synchronous match-state dependency is unavailable",
+                )
+            }
+            Self::SynchronousState(SynchronousMatchStateError::AssignmentNotFound { match_id }) => {
+                ApplicationError::new(
+                    ErrorCode::ResourceNotFound,
+                    "the match assignment was not found",
+                )
+                .with_detail("match_id", match_id.to_string())
+            }
+            Self::SynchronousState(_) => ApplicationError::new(
+                ErrorCode::InternalUnexpected,
+                "the synchronous match state could not be published",
+            ),
             Self::AuditEntry(_) => ApplicationError::new(
                 ErrorCode::InternalUnexpected,
                 "the command audit entry could not be constructed",
@@ -171,9 +193,9 @@ impl C1LiveActionCommandExecutionError {
 ///
 /// Admission remains a separate short transaction owned by
 /// `PostgresCommandAdmission`. Once admission has claimed the command, this
-/// adapter performs lease validation, canonical event append, command-audit and
-/// terminal-result persistence, and commit in one caller-independent
-/// PostgreSQL transaction.
+/// adapter performs lease validation, canonical event append, synchronous
+/// state publication, command-audit/outbox/terminal-result persistence, and
+/// commit in one caller-independent PostgreSQL transaction.
 #[derive(Debug, Clone, Copy)]
 pub struct PostgresC1LiveActionExecutor<'a> {
     pool: &'a PgPool,
@@ -231,6 +253,12 @@ impl<'a> PostgresC1LiveActionExecutor<'a> {
                         return Err(error);
                     }
                 };
+                if let Err(error) =
+                    persist_synchronous_match_state(&mut transaction, &stream, self.now_utc).await
+                {
+                    let _ = transaction.rollback().await;
+                    return Err(C1LiveActionCommandExecutionError::SynchronousState(error));
+                }
                 (
                     CommandResultEnvelope::accepted(
                         command.command_id(),

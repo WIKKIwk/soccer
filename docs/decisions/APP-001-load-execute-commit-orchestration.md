@@ -1,6 +1,6 @@
 # APP-001 — Load-execute-commit command orchestration
 
-**Status:** C1 application execution slice (canonical event, audit, transactional outbox, and terminal result) clean-database verified; critical-state executor and outbox delivery pending  
+**Status:** C1 application execution plus transactional score/timeline state implemented; clean-database rerun and lifecycle transport pending
 **Decision date:** 2026-08-08  
 **Depends on:** [CMD-003 short command admission](CMD-003-short-command-admission.md), [CMD-004 idempotency fingerprint conflict](CMD-004-idempotency-fingerprint-conflict.md), [MCH-005 command result and event envelopes](MCH-005-command-event-envelopes.md), [ARC-008 command, event, and version semantics](ARC-008-command-event-version-semantics.md)
 
@@ -48,15 +48,26 @@ contains only C1 events.
 `PostgresC1LiveActionExecutor` now implements the application
 `CommandExecutionPort` for this current C1 slice. After admission it begins a
 caller-independent PostgreSQL transaction, validates the processing lease,
-loads and appends the canonical C1/correction-union event, persists the typed
-command audit, inserts one versioned `match.event` outbox message for the
-accepted source event, persists the terminal result, and commits. A deterministic
+loads and appends the canonical C1/correction-union event, rebuilds and
+publishes the critical score/timeline state from the correction-resolved
+stream, persists the typed command audit, inserts one versioned `match.event`
+outbox message for the accepted source event, persists the terminal result,
+and commits. A deterministic
 expected-version conflict is returned as a `REJECTED` terminal result in the
 same transaction and writes no canonical event. The accepted result payload
 currently carries the appended event ID and event type. The audit row stores
 only command/actor/aggregate outcome metadata and safe rejection details; it
-does not copy request payloads or fingerprints. Critical synchronous state and
-outbox delivery/worker state remain later contracts.
+does not copy request payloads or fingerprints.
+
+The synchronous writer resolves the assigned fixture inside the command
+transaction, derives home/away identity from that fixture, applies the
+effective event stream, replaces the minimal timeline, and publishes summary
+and timeline-head roots with one shared projection generation. A missing
+assignment, fixture mismatch, split projection generation, reduction error,
+or projection write failure aborts the whole command transaction. The current
+canonical event union still has no lifecycle events, so this slice records the
+live half carried by the accepted C1 event; complete lifecycle/clock state is
+owned by the later lifecycle command increment.
 
 The event repository also exposes raw and typed C1 event lookup by internal
 `CommandId`, both through a pool and through a caller-owned transaction. This
@@ -106,10 +117,11 @@ The eventual application flow is:
 
 The typed ports and the database-independent orchestration of steps 1–4 are
 prepared in this increment. The C1 application slice now composes the event
-store, command audit, versioned transactional outbox insertion, and
-terminal-result persistence, while the complete production executor, critical
-synchronous state, outbox delivery worker, and transport handlers remain later
-increments because those contracts are not yet implemented. The
+store, synchronous score/timeline state, command audit, versioned
+transactional outbox insertion, and terminal-result persistence. Lifecycle
+commands and transport handlers remain later increments. Outbox claim,
+retry, poison, and publish-completion behavior is owned and verified by the
+`OUT-004` through `OUT-007` boundaries rather than duplicated here. The
 clean-DB-gated correction fixture proves the three transactional event-store
 slices can be composed in order without making the terminal result an untyped
 substitute for a future command-specific contract.
@@ -141,11 +153,13 @@ mixed canonical stream path. The clean-DB
 accepted C1 commit, accepted audit, versioned outbox readback, projection
 replay, deterministic rejected command with rejected audit and no outbox row,
 terminal replay, and rollback without an outbox row when audit persistence
-fails. The full critical-state, outbox delivery worker, and transport handlers
-remain pending.
+fails. It now also seeds an assigned fixture and asserts the score/timeline
+roots after acceptance and again after a forced rollback. The updated fixture
+compiles but requires a newly approved clean PostgreSQL target before its
+runtime evidence can be refreshed; ordinary workspace tests do not mutate a
+database.
 
 On 2026-08-14, the clean PostgreSQL admission fixtures were rerun with one
 fresh target per test and both passed; the C1 execution fixture also passed on
-a fresh target. The application slice therefore has current repeatable
-acceptance evidence without claiming the later critical-state or delivery
-contracts.
+a fresh target. That evidence predates the synchronous projection writer; the
+updated database-gated fixture is the required refresh for this increment.

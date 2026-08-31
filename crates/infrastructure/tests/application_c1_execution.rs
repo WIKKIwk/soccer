@@ -1,3 +1,5 @@
+mod support;
+
 use football_application::commands::{
     CommandAdmissionRequest, CommandExecutionContext, CommandOrchestrationError,
     CommandOrchestrationResult, CommandOrchestrator, LogicalCommandIdentity,
@@ -6,8 +8,9 @@ use football_application::commands::{
 use football_domain::{
     ActorIdentity, AdminUserId, AggregateVersion, C1LiveAction, C1LiveActionCommand,
     C1LiveActionCommandError, ClientCommandId, ClockMilliseconds, CommandId, CommandOutcome,
-    EventAppendError, EventId, EventVerificationStatus, GoalAwardType, GoalRecordedPayload,
-    MatchId, MatchPeriod, MatchProjection, RequestFingerprint, TeamId, UtcInstant,
+    EventAppendError, EventId, EventVerificationStatus, FixtureId, GoalAwardType,
+    GoalRecordedPayload, MatchId, MatchPeriod, MatchProjection, RequestFingerprint, TeamId,
+    UtcInstant,
 };
 use football_infrastructure::{
     C1LiveActionCommandExecutionError, CommandAuditRepositoryError, DatabasePoolConfig,
@@ -135,6 +138,15 @@ async fn application_orchestrator_commits_c1_event_and_terminal_rejection_atomic
     let match_id = MatchId::from_uuid(uuid("019fe950-3bc5-7cf1-b3d2-0728c077a930"));
     let home_team_id = TeamId::from_uuid(uuid("019fe950-3bc5-7cf2-b3d2-0728c077a930"));
     let away_team_id = TeamId::from_uuid(uuid("019fe950-3bc5-7cf3-b3d2-0728c077a930"));
+    support::seed_assigned_fixture(
+        &pool,
+        actor_id,
+        match_id,
+        FixtureId::from_uuid(uuid("019fe950-3bc5-7c00-b3d2-0728c077a930")),
+        home_team_id,
+        away_team_id,
+    )
+    .await;
     let first_command_id = CommandId::from_uuid(uuid("019fe950-3bc5-7cf4-b3d2-0728c077a930"));
     let first_request = request(
         first_command_id,
@@ -199,6 +211,7 @@ async fn application_orchestrator_commits_c1_event_and_terminal_rejection_atomic
         .expect("accepted C1 event should reduce into the projection");
     assert_eq!(projection.score().home_goals(), 1);
     assert_eq!(projection.score().away_goals(), 0);
+    support::assert_first_goal_projection(&pool, match_id).await;
 
     let first_terminal = load_terminal_command_result(&pool, first_command_id)
         .await
@@ -454,6 +467,7 @@ async fn application_orchestrator_commits_c1_event_and_terminal_rejection_atomic
             .await
             .expect("rolled-back outbox count query should succeed");
     assert_eq!(third_outbox_count, 0);
+    support::assert_first_goal_projection(&pool, match_id).await;
 
     pool.close().await;
 }

@@ -1221,8 +1221,10 @@ Gate status: CLI-001 passed on 2026-08-14. `footballctl` now uses one typed
 configuration/database adapter and centralized development authorization
 boundaries; exact authorization and configuration failure behavior is covered
 by unit and subprocess tests. APP-001 and APP-002 remain open because their
-decision records explicitly leave critical synchronous state, outbox delivery,
-and later audit hardening for subsequent increments.
+updated clean-database acceptance has not yet been run. Their C1 executor now
+publishes correction-resolved score/timeline roots in the canonical command
+transaction together with audit, outbox, and terminal result; lifecycle
+commands remain part of this week's API/CLI work.
 PUB-001 passed on 2026-08-31: the separate public API serves canonical
 match-detail and timeline resources from the correction-resolved event stream,
 with versioned DTOs, stable errors, and an in-repository OpenAPI contract.

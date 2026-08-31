@@ -1,6 +1,6 @@
 # APP-002 — Expected version, idempotency, and audit boundary
 
-**Status:** Minimal command-audit schema, transactional outbox schema, and C1 transaction integration clean-database verified; critical-state/outbox delivery and audit hardening pending  
+**Status:** Expected-version, idempotency, audit/outbox, and transactional C1 score/timeline integration implemented; clean-database rerun pending
 **Decision date:** 2026-08-08  
 **Depends on:** [APP-001 load-execute-commit orchestration](APP-001-load-execute-commit-orchestration.md), [CMD-003 short command admission](CMD-003-short-command-admission.md), [CMD-004 idempotency fingerprint conflict](CMD-004-idempotency-fingerprint-conflict.md), [MCH-004 aggregate version semantics](MCH-004-aggregate-version-semantics.md)
 
@@ -39,9 +39,10 @@ semantics.
 The infrastructure pre-execution lease adapter now provides the first
 transaction step: it locks the command row and validates the processing owner
 and expiry before the aggregate stream is loaded. The C1 executor composes
-this guard with aggregate load, event writes, command audit, and terminal-result
-persistence. Critical synchronous state, outbox, and later audit hardening
-remain separate increments.
+this guard with aggregate load, event writes, correction-resolved synchronous
+score/timeline publication, command audit, transactional outbox insertion, and
+terminal-result persistence. Later audit-history hardening remains owned by
+its dedicated audit increment.
 
 The lease guard and C1 transaction adapter now expose a stable application
 error mapping at their infrastructure boundary. Expected-version conflicts
@@ -73,5 +74,9 @@ The command-admission regression coverage also verifies that a stored command
 row whose database identity does not match the requested logical command is
 rejected as an internal integrity failure without exposing storage details.
 On 2026-08-14, the command-admission identity, application admission, and C1
-execution checks passed with fresh PostgreSQL targets. Critical synchronous
-state, outbox delivery, and later audit hardening remain open.
+execution checks passed with fresh PostgreSQL targets. The fixture now also
+asserts shared projection generation, score, lifecycle-half marker, timeline,
+and rollback preservation. This updated database-gated fixture compiles but
+has not been run against a new clean target in the current increment. Outbox
+claim/retry/publish completion remains verified by the dedicated OUT tests;
+later audit-history hardening is not folded into this command contract.

@@ -30,6 +30,7 @@ pub mod realtime_notifications;
 pub mod realtime_sequence;
 pub mod reconciliation;
 pub mod reopen_execution;
+pub mod synchronous_match_state;
 pub mod teams;
 pub mod verification_execution;
 
@@ -136,5 +137,8 @@ pub use reconciliation::{
     CommandRecoveryDecision, load_command_reconciliation_snapshot,
 };
 pub use reopen_execution::{ReopenMatchExecutionError, execute_reopen_match_in_transaction};
+pub use synchronous_match_state::{
+    SynchronousMatchState, SynchronousMatchStateError, persist_synchronous_match_state,
+};
 pub use teams::{TeamRepositoryError, load_team, persist_team, persist_two_teams};
 pub use verification_execution::{VerifyMatchExecutionError, execute_verify_match_in_transaction};
