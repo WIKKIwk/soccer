@@ -428,6 +428,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "football-public-api"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "football-application",
+ "football-contracts",
+ "football-domain",
+ "football-infrastructure",
+ "football-platform",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "football-testkit"
 version = "0.1.0"
 dependencies = [

@@ -3,6 +3,7 @@
 //! Versioned public and admin transport contracts.
 
 pub mod match_snapshot;
+pub mod match_timeline;
 pub mod realtime;
 
 use serde::Serialize;
@@ -13,6 +14,7 @@ pub use match_snapshot::{
     MatchSnapshotResponse, MatchSnapshotScore, MatchSnapshotTimelineEntry,
     MatchSnapshotVerificationStatus,
 };
+pub use match_timeline::{MatchTimelineData, MatchTimelineResponse};
 pub use realtime::{
     REALTIME_MATCH_CORRECTION_NOTIFICATION_SCHEMA_VERSION,
     REALTIME_MATCH_CORRECTION_NOTIFICATION_TYPE, REALTIME_MATCH_NOTIFICATION_SCHEMA_VERSION,

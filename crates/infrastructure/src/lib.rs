@@ -19,6 +19,7 @@ pub mod lineups;
 pub mod match_event_payloads;
 pub mod match_events;
 pub mod match_projections;
+pub mod match_queries;
 pub mod migrations;
 pub mod operations;
 pub mod outbox;
@@ -86,6 +87,9 @@ pub use match_events::{
 };
 pub use match_projections::{
     MatchProjectionRebuildError, RebuiltMatchProjection, rebuild_match_projection,
+};
+pub use match_queries::{
+    CanonicalMatchQuery, CanonicalMatchQueryError, load_canonical_match_query,
 };
 pub use migrations::{MIGRATIONS_DIRECTORY, load_migrator, run_migrations};
 pub use operations::{

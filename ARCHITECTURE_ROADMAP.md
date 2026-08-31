@@ -1213,7 +1213,7 @@ accepted/rejected command-audit rows.
 - [x] `COR-001` Implement correction reason and void event.
 - [x] `COR-002` Implement an effective event-stream builder.
 - [x] `COR-003` Rebuild score after a voided goal.
-- [ ] `PUB-001` Add minimal match-detail and timeline REST endpoints.
+- [x] `PUB-001` Add minimal match-detail and timeline REST endpoints.
 - [ ] `PIL-001` Execute the complete vertical-slice acceptance fixture.
 
 Gate: one operator can run the full match through `footballctl`, correct an event, and read canonical current state through REST.
@@ -1223,6 +1223,9 @@ boundaries; exact authorization and configuration failure behavior is covered
 by unit and subprocess tests. APP-001 and APP-002 remain open because their
 decision records explicitly leave critical synchronous state, outbox delivery,
 and later audit hardening for subsequent increments.
+PUB-001 passed on 2026-08-31: the separate public API serves canonical
+match-detail and timeline resources from the correction-resolved event stream,
+with versioned DTOs, stable errors, and an in-repository OpenAPI contract.
 
 ## Month 3 — Directory and localization hardening
 

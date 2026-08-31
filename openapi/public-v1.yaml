@@ -1,0 +1,156 @@
+openapi: 3.1.0
+info:
+  title: Football Public API
+  version: 1.0.0
+paths:
+  /v1/matches/{match_id}:
+    get:
+      operationId: getMatchDetail
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+      responses:
+        '200':
+          description: Canonical match detail snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchSnapshotResponse'
+        '400':
+          $ref: '#/components/responses/InvalidMatchId'
+        '404':
+          $ref: '#/components/responses/MatchNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /v1/matches/{match_id}/timeline:
+    get:
+      operationId: getMatchTimeline
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+      responses:
+        '200':
+          description: Canonical ordered match timeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchTimelineResponse'
+        '400':
+          $ref: '#/components/responses/InvalidMatchId'
+        '404':
+          $ref: '#/components/responses/MatchNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  parameters:
+    MatchId:
+      name: match_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    InvalidMatchId:
+      description: The path identity is not a UUIDv7
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    MatchNotFound:
+      description: No assigned match owns this identity
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    InternalError:
+      description: The canonical snapshot could not be loaded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+  schemas:
+    MatchSnapshotResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: '#/components/schemas/MatchSnapshotData'
+        meta:
+          $ref: '#/components/schemas/MatchSnapshotMeta'
+    MatchSnapshotData:
+      type: object
+      required: [match_id, home_team_id, away_team_id, score, aggregate_version, timeline]
+      properties:
+        match_id: { type: string, format: uuid }
+        home_team_id: { type: string, format: uuid }
+        away_team_id: { type: string, format: uuid }
+        score:
+          $ref: '#/components/schemas/MatchScore'
+        aggregate_version: { type: integer, format: int64, minimum: 0 }
+        timeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimelineEntry'
+    MatchTimelineResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [match_id, aggregate_version, entries]
+          properties:
+            match_id: { type: string, format: uuid }
+            aggregate_version: { type: integer, format: int64, minimum: 0 }
+            entries:
+              type: array
+              items:
+                $ref: '#/components/schemas/TimelineEntry'
+        meta:
+          $ref: '#/components/schemas/MatchSnapshotMeta'
+    MatchScore:
+      type: object
+      required: [home_goals, away_goals]
+      properties:
+        home_goals: { type: integer, format: int32, minimum: 0 }
+        away_goals: { type: integer, format: int32, minimum: 0 }
+    TimelineEntry:
+      type: object
+      required: [event_id, aggregate_version, event_index, event_type, period, clock_ms]
+      properties:
+        event_id: { type: string, format: uuid }
+        aggregate_version: { type: integer, format: int64, minimum: 1 }
+        event_index: { type: integer, format: int32, minimum: 0 }
+        event_type: { type: string }
+        period:
+          type: string
+          enum: [first_half, second_half]
+        clock_ms: { type: integer, format: int64, minimum: 0 }
+    MatchSnapshotMeta:
+      type: object
+      required: [version, generated_at, verification_status, quality_flags]
+      properties:
+        version: { type: integer, format: int32, const: 1 }
+        generated_at: { type: string, format: date-time }
+        verification_status:
+          type: string
+          enum: [provisional, verified]
+        quality_flags:
+          type: array
+          items: { type: string, minLength: 1 }
+    ApiErrorResponse:
+      type: object
+      required: [error, meta]
+      properties:
+        error:
+          type: object
+          required: [code, category, message, details, retryable]
+          properties:
+            code: { type: string }
+            category: { type: string }
+            message: { type: string }
+            details: { type: object, additionalProperties: { type: string } }
+            retryable: { type: boolean }
+        meta:
+          type: object
+          properties:
+            request_id: { type: string }
+            client_command_id: { type: string }

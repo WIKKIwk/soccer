@@ -8,5 +8,6 @@ members = [
     "crates/platform",
     "crates/testkit",
     "apps/admin-api",
+    "apps/public-api",
     "apps/footballctl",
 ]

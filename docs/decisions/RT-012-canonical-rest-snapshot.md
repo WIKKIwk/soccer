@@ -26,10 +26,10 @@ therefore not emitted by this minimal canonical C1 read contract. It also does
 not infer verification status from missing data; the query adapter supplies it
 explicitly.
 
-`snapshot_required` remains a recovery signal. The public HTTP route that
-serves this contract belongs to `PUB-001`; RT-012 freezes the canonical data
-shape and the application mapping that route must use. No WebSocket handler or
-database write is added here.
+`snapshot_required` remains a recovery signal. `PUB-001` now serves this
+contract from `GET /v1/matches/{match_id}` and exposes its ordered timeline at
+`GET /v1/matches/{match_id}/timeline`. No WebSocket handler or database write
+is added by the public query boundary.
 
 ## Implementation
 
