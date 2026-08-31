@@ -36,6 +36,10 @@ pub enum CommandAdmissionError {
     FingerprintMismatch {
         command_id: CommandId,
     },
+    CommandIdentityMismatch {
+        expected: CommandId,
+        actual: CommandId,
+    },
     CommandInProgress {
         command_id: CommandId,
     },
@@ -204,6 +208,10 @@ impl CommandAdmissionError {
                 "the command ID is already bound to a different request",
             )
             .with_detail("command_id", command_id.to_string()),
+            Self::CommandIdentityMismatch { .. } => ApplicationError::new(
+                ErrorCode::InternalUnexpected,
+                "the command admission identity does not match the stored command",
+            ),
             Self::CommandInProgress { command_id } => ApplicationError::new(
                 ErrorCode::IdempotencyCommandInProgress,
                 "the command is already being processed",
@@ -271,6 +279,10 @@ impl fmt::Display for CommandAdmissionError {
                     "command {command_id} has a different request fingerprint"
                 )
             }
+            Self::CommandIdentityMismatch { expected, actual } => write!(
+                formatter,
+                "command admission identity mismatch: expected {expected}, stored {actual}"
+            ),
             Self::CommandInProgress { command_id } => {
                 write!(formatter, "command {command_id} is already processing")
             }
@@ -290,6 +302,7 @@ impl std::error::Error for CommandAdmissionError {
             Self::InvalidStoredStatus { .. }
             | Self::InvalidStoredLease { .. }
             | Self::FingerprintMismatch { .. }
+            | Self::CommandIdentityMismatch { .. }
             | Self::CommandInProgress { .. }
             | Self::ReconciliationRequired { .. } => None,
         }
@@ -461,11 +474,17 @@ pub async fn admit_command(
     .map_err(CommandAdmissionError::Database)?;
 
     let command_id = CommandId::from_uuid(row.id);
-    let status = parse_status(command_id, row.status)?;
     let expected_fingerprint = identity.request_fingerprint().as_bytes();
     if row.request_fingerprint.as_slice() != expected_fingerprint {
         return Err(CommandAdmissionError::FingerprintMismatch { command_id });
     }
+    if command_id != identity.command_id() {
+        return Err(CommandAdmissionError::CommandIdentityMismatch {
+            expected: identity.command_id(),
+            actual: command_id,
+        });
+    }
+    let status = parse_status(command_id, row.status)?;
 
     match status {
         CommandStatus::Accepted | CommandStatus::Rejected => {
@@ -816,6 +835,22 @@ mod tests {
             Some(&command_id().to_string())
         );
         assert!(!error.message().contains("fingerprint"));
+    }
+
+    #[test]
+    fn maps_internal_command_identity_conflicts_to_a_safe_internal_error() {
+        let error = CommandAdmissionError::CommandIdentityMismatch {
+            expected: command_id(),
+            actual: CommandId::from_uuid(
+                Uuid::parse_str("019fe2e0-3bc5-7cf1-b3d2-0728c077a930")
+                    .expect("stored command UUID should be valid"),
+            ),
+        }
+        .to_application_error();
+
+        assert_eq!(error.code(), ErrorCode::InternalUnexpected);
+        assert!(error.details().is_empty());
+        assert!(!error.to_string().contains(&command_id().to_string()));
     }
 
     #[test]

@@ -68,3 +68,10 @@ audit read-back, accepted outbox envelope read-back, rejected commands without
 canonical events or outbox rows, terminal replay through the application
 orchestrator, and rollback when audit persistence fails before outbox
 insertion.
+
+The command-admission regression coverage also verifies that a stored command
+row whose database identity does not match the requested logical command is
+rejected as an internal integrity failure without exposing storage details.
+On 2026-08-14, the command-admission identity, application admission, and C1
+execution checks passed with fresh PostgreSQL targets. Critical synchronous
+state, outbox delivery, and later audit hardening remain open.

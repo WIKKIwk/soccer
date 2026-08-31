@@ -298,6 +298,31 @@ async fn admit_command_enforces_idempotency_and_processing_lease_rules() {
             if command_id == first_command_id
     ));
 
+    let identity_mismatch_request = request(
+        "019fe310-3bc5-7d00-b3d2-0728c077a930",
+        "019fe310-3bc5-7cf1-b3d2-0728c077a930",
+        [0x11; 32],
+        "019fe310-3bc5-7d01-b3d2-0728c077a930",
+        2_010,
+        2_040,
+    );
+    let identity_mismatch_error = match admit_command(&pool, &identity_mismatch_request).await {
+        Err(error) => error,
+        other => panic!("stored command identity mismatch should be rejected: {other:?}"),
+    };
+    assert!(matches!(
+        &identity_mismatch_error,
+        CommandAdmissionError::CommandIdentityMismatch { expected, actual }
+            if *expected == identity_mismatch_request.identity().command_id()
+                && *actual == first_command_id
+    ));
+    let safe_error = identity_mismatch_error.to_application_error();
+    assert_eq!(
+        safe_error.code(),
+        football_platform::ErrorCode::InternalUnexpected
+    );
+    assert!(safe_error.details().is_empty());
+
     let expiring = request(
         "019fe310-3bc5-7cf5-b3d2-0728c077a930",
         "019fe310-3bc5-7cf6-b3d2-0728c077a930",

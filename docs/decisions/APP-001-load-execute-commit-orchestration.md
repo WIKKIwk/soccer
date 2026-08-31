@@ -143,3 +143,9 @@ replay, deterministic rejected command with rejected audit and no outbox row,
 terminal replay, and rollback without an outbox row when audit persistence
 fails. The full critical-state, outbox delivery worker, and transport handlers
 remain pending.
+
+On 2026-08-14, the clean PostgreSQL admission fixtures were rerun with one
+fresh target per test and both passed; the C1 execution fixture also passed on
+a fresh target. The application slice therefore has current repeatable
+acceptance evidence without claiming the later critical-state or delivery
+contracts.
