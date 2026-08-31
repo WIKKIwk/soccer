@@ -28,7 +28,14 @@ does not invent competition data.
 
 ## Verification status
 
-Domain and CLI validation are database-free tested. The migration and
-repository are implemented, but DIR-002 remains incomplete until two
-approved source-backed team records are inserted and read back on a clean
-approved database target.
+Completed on 2026-08-14. Domain and CLI validation are database-free tested;
+the migration and repository were also exercised against the dedicated local
+database `football_socket_test_idn002`. The guarded `footballctl directory
+seed-teams` command inserted and read back two explicit Superliga team records,
+`Andijon` and `Buxoro`, using the PFL's 2026 Superliga match report as the
+source-backed reference: [PFL.UZ — Andijon Buxoro’ni ishonchli hisobda yengdi](https://pfl.uz/news/superliga-andijon-buxoroni-ishonchli-hisobda-yengdi).
+
+The focused `directory_import` PostgreSQL fixture also passed for the
+two-team path, idempotent re-run, read-back, conflicting-name rejection, and
+unknown-team rejection. The fixture's synthetic player setup was used only to
+exercise the dependent path; DIR-004 remains a separate, open roadmap task.

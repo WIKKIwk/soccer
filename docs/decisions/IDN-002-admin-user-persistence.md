@@ -52,8 +52,10 @@ recorded by P0-001.
 
 ## Verification status
 
-The migration is database-free parseable and included in the repository’s
-ordered migration set. The command parser, input validation, and read-back
-logic have database-free tests. IDN-002 remains incomplete until an approved
-identity and clean target are supplied for the explicit seed and read-back
-verification.
+Completed on 2026-08-14. The migration is included in the repository’s ordered
+migration set, and the command parser, input validation, and read-back logic
+have database-free tests. A dedicated local PostgreSQL database was created
+for this increment without modifying the existing project databases. The clean
+migration fixture passed, followed by the focused `footballctl` integration
+fixture, which verified the guarded insert, read-back, repeat-seed behavior,
+active state, and conflicting-identity rejection.

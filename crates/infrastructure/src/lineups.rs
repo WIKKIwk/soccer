@@ -3,7 +3,7 @@ use football_domain::{
     PlayerId, TeamId,
 };
 use sqlx::{Error as SqlxError, PgPool};
-use std::fmt;
+use std::{collections::HashSet, fmt};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -178,6 +178,14 @@ fn build_draft_lineup(
     .map_err(LineupRepositoryError::InvalidStoredLineup)
 }
 
+fn lineups_match(existing: &DraftLineup, requested: &DraftLineup) -> bool {
+    existing.id() == requested.id()
+        && existing.fixture_id() == requested.fixture_id()
+        && existing.team_id() == requested.team_id()
+        && existing.entries().iter().copied().collect::<HashSet<_>>()
+            == requested.entries().iter().copied().collect::<HashSet<_>>()
+}
+
 async fn load_entries(
     pool: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     lineup_id: LineupId,
@@ -279,7 +287,7 @@ pub async fn persist_draft_lineup(
         let entries = load_entries(&mut transaction, lineup.id()).await?;
         let existing = build_draft_lineup(row, entries)?;
 
-        if existing != *lineup {
+        if !lineups_match(&existing, lineup) {
             return Err(LineupRepositoryError::ExistingLineupConflict { id: lineup.id() });
         }
 
@@ -287,7 +295,7 @@ pub async fn persist_draft_lineup(
             .commit()
             .await
             .map_err(LineupRepositoryError::Database)?;
-        return Ok(existing);
+        return Ok(lineup.clone());
     }
 
     if let Some(existing_id) = sqlx::query_scalar::<_, Uuid>(

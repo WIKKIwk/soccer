@@ -29,7 +29,13 @@ current team assignment, and CLI commands remain later concerns.
 
 ## Verification status
 
-The domain model, migration, transactional repository, role decoding, and
-database-free tests are implemented. LIN-003 remains incomplete until the
-ordered migrations and one approved source-backed draft lineup are applied and
-read back on an approved clean database target.
+Completed on 2026-08-14. The domain model, ordered migration, transactional
+repository, role decoding, and focused PostgreSQL fixture were verified on the
+dedicated clean database `football_socket_test_week5_official`. The fixture
+persisted and read back an `Andijon`–`Buxoro` fixture-shaped record with a
+source-backed home draft lineup containing `Odil Abjumajidov` and `Hamidullo
+Karimov`; it also created and read back the second fixture-side test lineup.
+The fixture verified exact repeat idempotency,
+fixture/team ownership, unassigned-player rejection, duplicate-player
+protection, and fixture/lineup identity conflicts. The source-backed reference
+is the PFL 2026 Superliga report: [PFL.UZ — Andijon Buxoro’ni ishonchli hisobda yengdi](https://pfl.uz/news/superliga-andijon-buxoroni-ishonchli-hisobda-yengdi).

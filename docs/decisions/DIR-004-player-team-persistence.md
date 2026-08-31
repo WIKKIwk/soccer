@@ -43,7 +43,12 @@ does not run migrations implicitly and does not invent player or team data.
 
 ## Verification status
 
-The domain model, migration, repository transaction, parser, and read-back
-path are implemented. DIR-004 remains incomplete until one approved
-source-backed player is persisted and read back on an approved clean database
-that already contains its referenced team.
+Completed on 2026-08-14. The domain model, migration, repository transaction,
+parser, and read-back path were exercised on the dedicated clean database
+`football_socket_test_week5_official`. The focused `player_team_persistence`
+fixture persisted and read back the source-backed `Odil Abjumajidov` assignment
+to `Andijon`, with `Andijon` and `Buxoro` supplied as the two explicit teams.
+It also verified guarded insertion, exact repeat idempotency, person/player/team
+identity conflicts, missing-team rejection, and that rejected changes do not
+move the original assignment. The source-backed reference is the PFL 2026
+Superliga report: [PFL.UZ — Andijon Buxoro’ni ishonchli hisobda yengdi](https://pfl.uz/news/superliga-andijon-buxoroni-ishonchli-hisobda-yengdi).
