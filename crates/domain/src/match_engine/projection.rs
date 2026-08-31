@@ -172,6 +172,7 @@ impl MatchProjection {
         for event in stream.iter() {
             let payload = match event.payload() {
                 MatchEventPayload::C1(payload) => payload,
+                MatchEventPayload::Lifecycle(_) => continue,
                 MatchEventPayload::Correction(_) => {
                     return Err(MatchProjectionError::UnsupportedEffectiveCorrection {
                         event_id: event.event_id(),

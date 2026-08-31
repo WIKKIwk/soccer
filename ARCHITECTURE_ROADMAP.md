@@ -1223,8 +1223,11 @@ boundaries; exact authorization and configuration failure behavior is covered
 by unit and subprocess tests. APP-001 and APP-002 remain open because their
 updated clean-database acceptance has not yet been run. Their C1 executor now
 publishes correction-resolved score/timeline roots in the canonical command
-transaction together with audit, outbox, and terminal result; lifecycle
-commands remain part of this week's API/CLI work.
+transaction together with audit, outbox, and terminal result. The canonical
+lifecycle executor now applies the same transaction to schedule, lineup
+submission/confirmation, period transitions, finish, and synchronous
+summary/timeline/lineup publication. HTTP and CLI transport exposure remains
+part of this week's API/CLI work.
 PUB-001 passed on 2026-08-31: the separate public API serves canonical
 match-detail and timeline resources from the correction-resolved event stream,
 with versioned DTOs, stable errors, and an in-repository OpenAPI contract.

@@ -122,7 +122,9 @@ fn effective_verification_status(
             MatchEventPayload::Verification(VerificationEventPayload::MatchReopened(_)) => {
                 Some(MatchVerificationStatus::Provisional)
             }
-            MatchEventPayload::C1(_) | MatchEventPayload::Correction(_) => None,
+            MatchEventPayload::Lifecycle(_)
+            | MatchEventPayload::C1(_)
+            | MatchEventPayload::Correction(_) => None,
         })
         .unwrap_or_else(MatchVerificationStatus::initial)
 }

@@ -61,6 +61,13 @@ fn envelope(
     voids_event_id: Option<Uuid>,
 ) -> DomainEventEnvelope<MatchEventPayload> {
     let (event_type, schema_version) = match &payload {
+        MatchEventPayload::Lifecycle(payload) => (
+            payload
+                .event_type()
+                .try_as_event_type()
+                .expect("lifecycle event type should be valid"),
+            payload.schema_version(),
+        ),
         MatchEventPayload::C1(payload) => (
             payload
                 .event_type()
@@ -315,7 +322,9 @@ fn expected_verification_status(stream: &EffectiveEventStream<MatchEventPayload>
             MatchEventPayload::Verification(VerificationEventPayload::MatchReopened(_)) => {
                 Some("provisional")
             }
-            MatchEventPayload::C1(_) | MatchEventPayload::Correction(_) => None,
+            MatchEventPayload::Lifecycle(_)
+            | MatchEventPayload::C1(_)
+            | MatchEventPayload::Correction(_) => None,
         })
         .unwrap_or("provisional")
 }

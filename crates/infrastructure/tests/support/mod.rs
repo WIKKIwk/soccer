@@ -56,6 +56,7 @@ pub async fn seed_assigned_fixture(
         .expect("match assignment should insert");
 }
 
+#[allow(dead_code)]
 pub async fn assert_first_goal_projection(pool: &PgPool, match_id: MatchId) {
     let summary: (i64, i64, String, String, i64, i64, bool) = query_as(
         "SELECT home_goals, away_goals, match_state, verification_status, \

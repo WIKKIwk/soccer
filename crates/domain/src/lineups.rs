@@ -10,12 +10,26 @@ pub enum LineupRole {
     Substitute,
 }
 
+impl LineupRole {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Starter => "starter",
+            Self::Substitute => "substitute",
+        }
+    }
+
+    pub fn try_from_persisted_str(value: &str) -> Option<Self> {
+        match value {
+            "starter" => Some(Self::Starter),
+            "substitute" => Some(Self::Substitute),
+            _ => None,
+        }
+    }
+}
+
 impl fmt::Display for LineupRole {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Starter => formatter.write_str("starter"),
-            Self::Substitute => formatter.write_str("substitute"),
-        }
+        formatter.write_str(self.as_str())
     }
 }
 
@@ -200,6 +214,11 @@ mod tests {
     #[test]
     fn starter_and_substitute_roles_remain_distinct() {
         assert_ne!(LineupRole::Starter, LineupRole::Substitute);
+        assert_eq!(
+            LineupRole::try_from_persisted_str(LineupRole::Starter.as_str()),
+            Some(LineupRole::Starter)
+        );
+        assert_eq!(LineupRole::try_from_persisted_str("reserve"), None);
     }
 
     #[test]

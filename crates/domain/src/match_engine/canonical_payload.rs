@@ -1,4 +1,6 @@
-use super::{C1EventPayload, CorrectionEventPayload, VerificationEventPayload};
+use super::{
+    C1EventPayload, CorrectionEventPayload, LifecycleEventPayload, VerificationEventPayload,
+};
 
 /// Payload union for one canonical match stream.
 ///
@@ -8,12 +10,17 @@ use super::{C1EventPayload, CorrectionEventPayload, VerificationEventPayload};
 /// for a typed projection.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MatchEventPayload {
+    Lifecycle(LifecycleEventPayload),
     C1(C1EventPayload),
     Correction(CorrectionEventPayload),
     Verification(VerificationEventPayload),
 }
 
 impl MatchEventPayload {
+    pub const fn lifecycle(payload: LifecycleEventPayload) -> Self {
+        Self::Lifecycle(payload)
+    }
+
     pub const fn c1(payload: C1EventPayload) -> Self {
         Self::C1(payload)
     }
@@ -25,23 +32,30 @@ impl MatchEventPayload {
     pub const fn as_c1(&self) -> Option<&C1EventPayload> {
         match self {
             Self::C1(payload) => Some(payload),
-            Self::Correction(_) | Self::Verification(_) => None,
+            Self::Lifecycle(_) | Self::Correction(_) | Self::Verification(_) => None,
         }
     }
 
     pub const fn as_correction(&self) -> Option<&CorrectionEventPayload> {
         match self {
-            Self::C1(_) | Self::Verification(_) => None,
+            Self::Lifecycle(_) | Self::C1(_) | Self::Verification(_) => None,
             Self::Correction(payload) => Some(payload),
         }
     }
 
     pub const fn event_type_name(&self) -> &'static str {
         match self {
+            Self::Lifecycle(payload) => payload.event_type().as_str(),
             Self::C1(payload) => payload.event_type().as_str(),
             Self::Correction(payload) => payload.event_type().as_str(),
             Self::Verification(payload) => payload.event_type().as_str(),
         }
+    }
+}
+
+impl From<LifecycleEventPayload> for MatchEventPayload {
+    fn from(payload: LifecycleEventPayload) -> Self {
+        Self::lifecycle(payload)
     }
 }
 

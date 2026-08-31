@@ -1,11 +1,15 @@
 use crate::c1_event_payloads::{
     C1EventPayloadCodecError, decode_c1_event_envelope, encode_c1_event_envelope,
 };
+use crate::lifecycle_event_payloads::{
+    LifecycleEventPayloadCodecError, decode_lifecycle_event_envelope,
+    encode_lifecycle_event_envelope,
+};
 use football_domain::{
     C1EventType, CorrectionEventPayload, CorrectionEventType, CorrectionReason,
     DomainEventEnvelope, EventId, EventSchemaVersion, EventVerificationStatus, EventVoidedPayload,
-    MatchEventPayload, MatchReopenedPayload, MatchVerifiedPayload, VerificationEventPayload,
-    VerificationEventType,
+    LifecycleEventType, MatchEventPayload, MatchReopenedPayload, MatchVerifiedPayload,
+    VerificationEventPayload, VerificationEventType,
 };
 use serde_json::{Map, Value, json};
 use std::fmt;
@@ -17,6 +21,7 @@ use std::fmt;
 /// carries its target in `voids_event_id`, not in the JSON body.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MatchEventPayloadCodecError {
+    Lifecycle(LifecycleEventPayloadCodecError),
     C1(C1EventPayloadCodecError),
     UnsupportedEventType {
         event_id: EventId,
@@ -73,6 +78,7 @@ pub enum MatchEventPayloadCodecError {
 impl fmt::Display for MatchEventPayloadCodecError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Lifecycle(error) => error.fmt(formatter),
             Self::C1(error) => error.fmt(formatter),
             Self::UnsupportedEventType { event_id, actual } => {
                 write!(
@@ -156,6 +162,7 @@ impl fmt::Display for MatchEventPayloadCodecError {
 impl std::error::Error for MatchEventPayloadCodecError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
+            Self::Lifecycle(error) => Some(error),
             Self::C1(error) => Some(error),
             Self::UnsupportedEventType { .. }
             | Self::EventTypeMismatch { .. }
@@ -181,6 +188,8 @@ pub fn encode_match_event_envelope(
     event: &DomainEventEnvelope<MatchEventPayload>,
 ) -> Result<DomainEventEnvelope<Value>, MatchEventPayloadCodecError> {
     match event.payload() {
+        MatchEventPayload::Lifecycle(payload) => encode_lifecycle_event_envelope(event, payload)
+            .map_err(MatchEventPayloadCodecError::Lifecycle),
         MatchEventPayload::C1(payload) => {
             reject_correction_reference(event, "supersedes_event_id")?;
             reject_correction_reference(event, "voids_event_id")?;
@@ -205,6 +214,10 @@ pub fn decode_match_event_envelope(
     event: DomainEventEnvelope<Value>,
 ) -> Result<DomainEventEnvelope<MatchEventPayload>, MatchEventPayloadCodecError> {
     let event_type = event.event_type().as_str();
+    if LifecycleEventType::try_from_str(event_type).is_some() {
+        return decode_lifecycle_event_envelope(event)
+            .map_err(MatchEventPayloadCodecError::Lifecycle);
+    }
     if is_c1_event_type(event_type) {
         reject_correction_reference(&event, "supersedes_event_id")?;
         reject_correction_reference(&event, "voids_event_id")?;

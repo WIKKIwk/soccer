@@ -7,6 +7,9 @@ mod effective_stream;
 mod envelopes;
 mod events;
 mod identity;
+mod lifecycle_commands;
+mod lifecycle_events;
+mod lifecycle_projection;
 mod projection;
 mod schema;
 mod state;
@@ -40,6 +43,9 @@ pub use events::{
     YellowCardRecordedPayload,
 };
 pub use identity::{MatchId, MatchIdentity};
+pub use lifecycle_commands::{MatchLifecycleCommand, MatchLifecycleCommandError};
+pub use lifecycle_events::{LifecycleEventPayload, LifecycleEventType, LineupSubmittedPayload};
+pub use lifecycle_projection::{LifecycleProjection, LifecycleProjectionError};
 pub use projection::{MatchProjection, MatchProjectionError, MatchScore, TimelineEntry};
 pub use schema::{
     EventSchemaDefinition, EventSchemaDefinitionError, EventSchemaKey, EventSchemaLookupError,

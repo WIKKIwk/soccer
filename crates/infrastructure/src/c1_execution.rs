@@ -7,7 +7,9 @@ use crate::match_events::{
 use football_application::commands::CommandExecutionContext;
 use football_domain::{
     ActorIdentity, AggregateVersion, C1EventPayload, C1LiveActionCommand, C1LiveActionCommandError,
-    CanonicalEventStream, CommandId, EventAppendError, MatchEventPayload, UtcInstant,
+    CanonicalEventStream, CommandId, EffectiveEventStream, EffectiveEventStreamError,
+    EventAppendError, LifecycleProjection, LifecycleProjectionError, MatchEventPayload,
+    MatchPeriod, MatchState, UtcInstant,
 };
 use football_platform::{ApplicationError, ErrorCode};
 use sqlx::{Error as SqlxError, Postgres, Transaction};
@@ -42,6 +44,12 @@ pub enum C1LiveActionExecutionError {
     },
     Lease(CommandExecutionLeaseError),
     Load(MatchEventRepositoryError),
+    EffectiveStream(EffectiveEventStreamError),
+    Lifecycle(LifecycleProjectionError),
+    LifecyclePeriodMismatch {
+        state: MatchState,
+        period: MatchPeriod,
+    },
     Command(C1LiveActionCommandError),
     Persist(MatchEventRepositoryError),
 }
@@ -94,6 +102,14 @@ impl fmt::Display for C1LiveActionExecutionError {
             ),
             Self::Lease(error) => write!(formatter, "C1 command lease validation failed: {error}"),
             Self::Load(error) => write!(formatter, "C1 event stream load failed: {error}"),
+            Self::EffectiveStream(error) => {
+                write!(formatter, "C1 effective stream failed: {error}")
+            }
+            Self::Lifecycle(error) => write!(formatter, "C1 lifecycle replay failed: {error}"),
+            Self::LifecyclePeriodMismatch { state, period } => write!(
+                formatter,
+                "C1 action period {period:?} does not match lifecycle state {state:?}"
+            ),
             Self::Command(error) => write!(formatter, "C1 command validation failed: {error}"),
             Self::Persist(error) => write!(formatter, "C1 event persistence failed: {error}"),
         }
@@ -105,11 +121,14 @@ impl std::error::Error for C1LiveActionExecutionError {
         match self {
             Self::Lease(error) => Some(error),
             Self::Load(error) | Self::Persist(error) => Some(error),
+            Self::EffectiveStream(error) => Some(error),
+            Self::Lifecycle(error) => Some(error),
             Self::Command(error) => Some(error),
             Self::ContextCommandIdMismatch { .. }
             | Self::ContextActorMismatch { .. }
             | Self::ContextExpectedVersionMissing { .. }
-            | Self::ContextExpectedVersionMismatch { .. } => None,
+            | Self::ContextExpectedVersionMismatch { .. }
+            | Self::LifecyclePeriodMismatch { .. } => None,
         }
     }
 }
@@ -134,6 +153,16 @@ impl C1LiveActionExecutionError {
             .with_detail("field", "expected_version"),
             Self::Lease(error) => error.to_application_error(),
             Self::Load(error) | Self::Persist(error) => map_match_event_repository_error(error),
+            Self::EffectiveStream(_) | Self::Lifecycle(_) => ApplicationError::new(
+                ErrorCode::InternalUnexpected,
+                "the canonical lifecycle stream is invalid",
+            ),
+            Self::LifecyclePeriodMismatch { state, period } => ApplicationError::new(
+                ErrorCode::DomainInvalidTransition,
+                "the live action period does not match the current match state",
+            )
+            .with_detail("state", state.as_persisted_str())
+            .with_detail("period", period.as_persisted_str()),
             Self::Command(error) => map_c1_command_error(error),
         }
     }
@@ -344,6 +373,7 @@ pub async fn execute_c1_live_action_in_canonical_stream_transaction_outcome(
     let stream = load_canonical_match_event_stream_in_transaction(transaction, command.match_id())
         .await
         .map_err(C1LiveActionExecutionError::Load)?;
+    validate_live_action_lifecycle(&stream, command.period())?;
     let current_version = stream.current_version();
     let existing_event_count = stream.len();
     let match_id = command.match_id();
@@ -368,6 +398,23 @@ pub async fn execute_c1_live_action_in_canonical_stream_transaction_outcome(
     .map_err(C1LiveActionExecutionError::Persist)?;
 
     Ok(C1LiveActionTransactionOutcome::Accepted(appended_stream))
+}
+
+fn validate_live_action_lifecycle(
+    stream: &CanonicalEventStream<MatchEventPayload>,
+    period: MatchPeriod,
+) -> Result<(), C1LiveActionExecutionError> {
+    let effective = EffectiveEventStream::try_from_canonical(stream)
+        .map_err(C1LiveActionExecutionError::EffectiveStream)?;
+    let lifecycle = LifecycleProjection::from_effective_stream(&effective)
+        .map_err(C1LiveActionExecutionError::Lifecycle)?;
+    if lifecycle.has_lifecycle_events() && !lifecycle.accepts_live_period(period) {
+        return Err(C1LiveActionExecutionError::LifecyclePeriodMismatch {
+            state: lifecycle.state(),
+            period,
+        });
+    }
+    Ok(())
 }
 
 fn validate_c1_execution_context(

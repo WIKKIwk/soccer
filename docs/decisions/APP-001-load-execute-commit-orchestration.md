@@ -1,6 +1,6 @@
 # APP-001 — Load-execute-commit command orchestration
 
-**Status:** C1 application execution plus transactional score/timeline state implemented; clean-database rerun and lifecycle transport pending
+**Status:** C1 and lifecycle application execution plus transactional summary/timeline/lineup state implemented; clean-database rerun and transport handlers pending
 **Decision date:** 2026-08-08  
 **Depends on:** [CMD-003 short command admission](CMD-003-short-command-admission.md), [CMD-004 idempotency fingerprint conflict](CMD-004-idempotency-fingerprint-conflict.md), [MCH-005 command result and event envelopes](MCH-005-command-event-envelopes.md), [ARC-008 command, event, and version semantics](ARC-008-command-event-version-semantics.md)
 
@@ -45,14 +45,14 @@ correction marker without attempting to decode the full stream as C1-only. The
 older C1-only adapter remains available for streams whose persisted contract
 contains only C1 events.
 
-`PostgresC1LiveActionExecutor` now implements the application
-`CommandExecutionPort` for this current C1 slice. After admission it begins a
+`PostgresC1LiveActionExecutor` and `PostgresLifecycleExecutor` implement the
+application `CommandExecutionPort` for live actions and regular match
+lifecycle commands. After admission each begins a
 caller-independent PostgreSQL transaction, validates the processing lease,
-loads and appends the canonical C1/correction-union event, rebuilds and
-publishes the critical score/timeline state from the correction-resolved
-stream, persists the typed command audit, inserts one versioned `match.event`
-outbox message for the accepted source event, persists the terminal result,
-and commits. A deterministic
+loads and appends the canonical event, rebuilds and publishes the critical
+summary/timeline/lineup state from the correction-resolved stream, persists
+the typed command audit, inserts one versioned `match.event` outbox message for
+the accepted source event, persists the terminal result, and commits. A deterministic
 expected-version conflict is returned as a `REJECTED` terminal result in the
 same transaction and writes no canonical event. The accepted result payload
 currently carries the appended event ID and event type. The audit row stores
@@ -62,12 +62,12 @@ does not copy request payloads or fingerprints.
 The synchronous writer resolves the assigned fixture inside the command
 transaction, derives home/away identity from that fixture, applies the
 effective event stream, replaces the minimal timeline, and publishes summary
-and timeline-head roots with one shared projection generation. A missing
-assignment, fixture mismatch, split projection generation, reduction error,
-or projection write failure aborts the whole command transaction. The current
-canonical event union still has no lifecycle events, so this slice records the
-live half carried by the accepted C1 event; complete lifecycle/clock state is
-owned by the later lifecycle command increment.
+and timeline-head roots with the lineup projection in one new projection
+generation. Lifecycle events now drive the regular state sequence from
+scheduled through finished and persist submitted lineup snapshots; legacy C1
+streams retain their recorded live-half fallback. A missing assignment,
+fixture mismatch, split summary/timeline generation, reduction error, or
+projection write failure aborts the whole command transaction.
 
 The event repository also exposes raw and typed C1 event lookup by internal
 `CommandId`, both through a pool and through a caller-owned transaction. This
@@ -118,8 +118,10 @@ The eventual application flow is:
 The typed ports and the database-independent orchestration of steps 1–4 are
 prepared in this increment. The C1 application slice now composes the event
 store, synchronous score/timeline state, command audit, versioned
-transactional outbox insertion, and terminal-result persistence. Lifecycle
-commands and transport handlers remain later increments. Outbox claim,
+transactional outbox insertion, and terminal-result persistence. The lifecycle
+slice applies the same boundary to schedule, lineup submission/confirmation,
+period transitions, and finish while synchronously publishing lineup and
+match state. HTTP and CLI transport handlers remain later increments. Outbox claim,
 retry, poison, and publish-completion behavior is owned and verified by the
 `OUT-004` through `OUT-007` boundaries rather than duplicated here. The
 clean-DB-gated correction fixture proves the three transactional event-store
@@ -163,3 +165,10 @@ On 2026-08-14, the clean PostgreSQL admission fixtures were rerun with one
 fresh target per test and both passed; the C1 execution fixture also passed on
 a fresh target. That evidence predates the synchronous projection writer; the
 updated database-gated fixture is the required refresh for this increment.
+
+Database-free lifecycle reducer, strict payload-codec, context-validation,
+projection-generation, and lineup-state tests pass. The clean-DB-gated
+`lifecycle_command_execution` fixture compiles and covers the complete regular
+lifecycle, two lineup snapshots, shared state publication, audit, outbox, and
+terminal command rows; it has not been executed without an explicitly
+approved clean PostgreSQL target.
