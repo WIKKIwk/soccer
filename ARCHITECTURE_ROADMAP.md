@@ -1207,7 +1207,7 @@ accepted/rejected command-audit rows.
 
 - [ ] `APP-001` Implement load-execute-commit command orchestration.
 - [ ] `APP-002` Integrate expected version, idempotency, and audit.
-- [ ] `API-001` Add lineup, start-period, goal, card, substitution, and finish endpoints.
+- [x] `API-001` Add lineup, start-period, goal, card, substitution, and finish endpoints.
 - [x] `CLI-001` Create `footballctl` configuration and authentication adapter.
 - [ ] `CLI-002` Add fixture, lineup, start, goal, card, substitution, and finish commands.
 - [x] `COR-001` Implement correction reason and void event.
@@ -1231,6 +1231,12 @@ part of this week's API/CLI work.
 PUB-001 passed on 2026-08-31: the separate public API serves canonical
 match-detail and timeline resources from the correction-resolved event stream,
 with versioned DTOs, stable errors, and an in-repository OpenAPI contract.
+API-001 passed on 2026-08-31: ten versioned admin command routes now cover
+schedule, lineup submit/confirm, regular period transitions, finish, goals,
+cards, and substitutions through the canonical command executors. Strict
+request/response contracts, development identity and active-operator lease
+guards, stable HTTP errors, and the admin OpenAPI surface are tested without
+implicitly mutating a database.
 
 ## Month 3 — Directory and localization hardening
 

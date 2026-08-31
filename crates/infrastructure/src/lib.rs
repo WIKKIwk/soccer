@@ -19,6 +19,8 @@ pub mod lifecycle_command_execution;
 pub mod lifecycle_event_payloads;
 pub mod lifecycle_execution;
 pub mod lineups;
+pub mod match_command_access;
+pub mod match_command_dispatch;
 pub mod match_event_payloads;
 pub mod match_events;
 pub mod match_projections;
@@ -87,6 +89,13 @@ pub use lifecycle_execution::{
     LifecycleExecutionError, LifecycleTransactionOutcome, execute_lifecycle_in_transaction,
 };
 pub use lineups::{LineupRepositoryError, load_draft_lineup, persist_draft_lineup};
+pub use match_command_access::{
+    MatchCommandAccessError, load_lineup_submission, require_active_match_operator,
+};
+pub use match_command_dispatch::{
+    C1DispatchError, LifecycleDispatchError, MatchCommandDispatch, dispatch_c1_command,
+    dispatch_lifecycle_command,
+};
 pub use match_event_payloads::{
     MatchEventPayloadCodecError, decode_match_event_envelope, encode_match_event_envelope,
 };

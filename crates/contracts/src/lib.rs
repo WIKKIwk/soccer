@@ -2,6 +2,7 @@
 
 //! Versioned public and admin transport contracts.
 
+pub mod admin_commands;
 pub mod match_snapshot;
 pub mod match_timeline;
 pub mod realtime;
@@ -9,6 +10,13 @@ pub mod realtime;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
+pub use admin_commands::{
+    ADMIN_COMMAND_RESPONSE_VERSION, AdminCommandOutcome, AdminCommandRejection,
+    AdminCommandResponse, AdminCommandResponseData, AdminCommandResponseMeta, CardCommandRequest,
+    CardKind, CommandMetadata, DEVELOPMENT_ADMIN_ID_HEADER, DEVELOPMENT_AUTHORIZATION_HEADER,
+    DEVELOPMENT_AUTHORIZATION_VALUE, GoalAwardKind, GoalCommandRequest, LifecycleCommandRequest,
+    LineupSubmitCommandRequest, LivePeriodKind, SubstitutionCommandRequest,
+};
 pub use match_snapshot::{
     MATCH_SNAPSHOT_RESPONSE_VERSION, MatchSnapshotData, MatchSnapshotMeta, MatchSnapshotMetaError,
     MatchSnapshotResponse, MatchSnapshotScore, MatchSnapshotTimelineEntry,

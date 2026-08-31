@@ -1,0 +1,200 @@
+openapi: 3.1.0
+info:
+  title: Football Admin API
+  version: 1.0.0
+paths:
+  /admin/v1/matches/{match_id}/schedule:
+    post:
+      operationId: scheduleMatch
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody: { $ref: '#/components/requestBodies/LifecycleCommand' }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+  /admin/v1/matches/{match_id}/lineups/submit:
+    post:
+      operationId: submitLineup
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LineupSubmitCommandRequest' } } }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '404': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+  /admin/v1/matches/{match_id}/lineups/confirm:
+    post:
+      operationId: confirmLineups
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody: { $ref: '#/components/requestBodies/LifecycleCommand' }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+  /admin/v1/matches/{match_id}/periods/first-half/start:
+    post:
+      operationId: startFirstHalf
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody: { $ref: '#/components/requestBodies/LifecycleCommand' }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+  /admin/v1/matches/{match_id}/periods/first-half/end:
+    post:
+      operationId: endFirstHalf
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody: { $ref: '#/components/requestBodies/LifecycleCommand' }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+  /admin/v1/matches/{match_id}/periods/second-half/start:
+    post:
+      operationId: startSecondHalf
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody: { $ref: '#/components/requestBodies/LifecycleCommand' }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+  /admin/v1/matches/{match_id}/finish:
+    post:
+      operationId: finishMatch
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody: { $ref: '#/components/requestBodies/LifecycleCommand' }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+  /admin/v1/matches/{match_id}/goals:
+    post:
+      operationId: recordGoal
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GoalCommandRequest' } } }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+  /admin/v1/matches/{match_id}/cards:
+    post:
+      operationId: recordCard
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CardCommandRequest' } } }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+  /admin/v1/matches/{match_id}/substitutions:
+    post:
+      operationId: recordSubstitution
+      parameters: [{ $ref: '#/components/parameters/MatchId' }, { $ref: '#/components/parameters/DevelopmentAuthorization' }, { $ref: '#/components/parameters/DevelopmentAdminId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SubstitutionCommandRequest' } } }
+      responses: { '200': { $ref: '#/components/responses/CommandResult' }, '401': { $ref: '#/components/responses/CommandError' }, '409': { $ref: '#/components/responses/CommandError' }, '422': { $ref: '#/components/responses/CommandError' } }
+components:
+  parameters:
+    MatchId:
+      name: match_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DevelopmentAuthorization:
+      name: x-development-authorization
+      in: header
+      required: true
+      description: Development-only explicit guard; not a production credential.
+      schema: { type: string, const: '1' }
+    DevelopmentAdminId:
+      name: x-development-admin-id
+      in: header
+      required: true
+      description: Active assigned development administrator UUIDv7.
+      schema: { type: string, format: uuid }
+  requestBodies:
+    LifecycleCommand:
+      required: true
+      content: { application/json: { schema: { $ref: '#/components/schemas/LifecycleCommandRequest' } } }
+  responses:
+    CommandResult:
+      description: Idempotent accepted or final-rejected command result
+      content: { application/json: { schema: { $ref: '#/components/schemas/AdminCommandResponse' } } }
+    CommandError:
+      description: Request, access, conflict, dependency, or internal failure
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiErrorResponse' } } }
+  schemas:
+    CommandMetadata:
+      type: object
+      additionalProperties: false
+      required: [command_id, client_command_id, event_id, operator_lease_id, expected_version, clock_ms, occurred_at]
+      properties:
+        command_id: { type: string, format: uuid }
+        client_command_id: { type: string, format: uuid }
+        event_id: { type: string, format: uuid }
+        operator_lease_id: { type: string, format: uuid }
+        expected_version: { type: integer, format: int64, minimum: 0 }
+        clock_ms: { type: integer, format: int64, minimum: 0 }
+        occurred_at: { type: string, format: date-time }
+    LifecycleCommandRequest:
+      type: object
+      additionalProperties: false
+      required: [command]
+      properties: { command: { $ref: '#/components/schemas/CommandMetadata' } }
+    LineupSubmitCommandRequest:
+      type: object
+      additionalProperties: false
+      required: [command, lineup_id]
+      properties:
+        command: { $ref: '#/components/schemas/CommandMetadata' }
+        lineup_id: { type: string, format: uuid }
+    GoalCommandRequest:
+      type: object
+      additionalProperties: false
+      required: [command, period, team_id, award_type]
+      properties:
+        command: { $ref: '#/components/schemas/CommandMetadata' }
+        period: { $ref: '#/components/schemas/LivePeriod' }
+        team_id: { type: string, format: uuid }
+        scorer_player_id: { type: [string, 'null'], format: uuid }
+        award_type: { type: string, enum: [regular, penalty, own_goal] }
+    CardCommandRequest:
+      type: object
+      additionalProperties: false
+      required: [command, period, player_id, card]
+      properties:
+        command: { $ref: '#/components/schemas/CommandMetadata' }
+        period: { $ref: '#/components/schemas/LivePeriod' }
+        player_id: { type: string, format: uuid }
+        card: { type: string, enum: [yellow, second_yellow, red] }
+    SubstitutionCommandRequest:
+      type: object
+      additionalProperties: false
+      required: [command, period, team_id, player_on_id, player_off_id]
+      properties:
+        command: { $ref: '#/components/schemas/CommandMetadata' }
+        period: { $ref: '#/components/schemas/LivePeriod' }
+        team_id: { type: string, format: uuid }
+        player_on_id: { type: string, format: uuid }
+        player_off_id: { type: string, format: uuid }
+    LivePeriod:
+      type: string
+      enum: [first_half, second_half]
+    AdminCommandResponse:
+      type: object
+      required: [meta, data]
+      properties:
+        meta:
+          type: object
+          required: [version, request_id, client_command_id]
+          properties:
+            version: { type: integer, const: 1 }
+            request_id: { type: string, format: uuid }
+            client_command_id: { type: string, format: uuid }
+        data:
+          type: object
+          required: [command_id, match_id, aggregate_version, event_count, outcome]
+          properties:
+            command_id: { type: string, format: uuid }
+            match_id: { type: string, format: uuid }
+            aggregate_version: { type: integer, format: int64, minimum: 0 }
+            event_count: { type: integer, format: int64, minimum: 0 }
+            outcome: { type: string, enum: [accepted, rejected] }
+            result: { type: object }
+            rejection: { type: object }
+    ApiErrorResponse:
+      type: object
+      required: [error, meta]
+      properties:
+        error:
+          type: object
+          required: [code, category, message, details, retryable]
+          properties:
+            code: { type: string }
+            category: { type: string }
+            message: { type: string }
+            details: { type: object, additionalProperties: { type: string } }
+            retryable: { type: boolean }
+        meta:
+          type: object
+          properties:
+            request_id: { type: string }
+            client_command_id: { type: string }
