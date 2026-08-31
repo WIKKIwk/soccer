@@ -1,8 +1,8 @@
 use football_domain::{
     Competition, CompetitionId, CompetitionName, CompetitionNameError, Season, SeasonId,
-    SeasonYear, SeasonYearError,
+    SeasonResultsRevision, SeasonYear, SeasonYearError,
 };
-use sqlx::{Error as SqlxError, PgPool};
+use sqlx::{Error as SqlxError, PgPool, Postgres, Transaction};
 use std::fmt;
 use uuid::Uuid;
 
@@ -14,8 +14,17 @@ pub enum CompetitionRepositoryError {
     InvalidStoredSeasonYearRange {
         value: i32,
     },
+    InvalidStoredResultsRevision {
+        value: i64,
+    },
+    ResultsRevisionOutOfDatabaseRange {
+        value: u64,
+    },
     CompetitionNotFound {
         id: CompetitionId,
+    },
+    SeasonNotFound {
+        id: SeasonId,
     },
     ExistingCompetitionConflict {
         id: CompetitionId,
@@ -47,8 +56,21 @@ impl fmt::Display for CompetitionRepositoryError {
                     "stored season year is outside u16 range: {value}"
                 )
             }
+            Self::InvalidStoredResultsRevision { value } => {
+                write!(
+                    formatter,
+                    "stored season results revision is invalid: {value}"
+                )
+            }
+            Self::ResultsRevisionOutOfDatabaseRange { value } => write!(
+                formatter,
+                "season results revision is outside PostgreSQL BIGINT range: {value}"
+            ),
             Self::CompetitionNotFound { id } => {
                 write!(formatter, "competition {id} does not exist")
+            }
+            Self::SeasonNotFound { id } => {
+                write!(formatter, "season {id} does not exist")
             }
             Self::ExistingCompetitionConflict { id } => {
                 write!(
@@ -77,7 +99,10 @@ impl std::error::Error for CompetitionRepositoryError {
             Self::InvalidStoredName(error) => Some(error),
             Self::InvalidStoredSeasonYear(error) => Some(error),
             Self::InvalidStoredSeasonYearRange { .. }
+            | Self::InvalidStoredResultsRevision { .. }
+            | Self::ResultsRevisionOutOfDatabaseRange { .. }
             | Self::CompetitionNotFound { .. }
+            | Self::SeasonNotFound { .. }
             | Self::ExistingCompetitionConflict { .. }
             | Self::ExistingSeasonConflict { .. }
             | Self::ExistingSeasonYearConflict { .. } => None,
@@ -106,6 +131,7 @@ struct SeasonRow {
     id: Uuid,
     competition_id: Uuid,
     year: i32,
+    results_revision: i64,
 }
 
 impl TryFrom<SeasonRow> for Season {
@@ -117,11 +143,17 @@ impl TryFrom<SeasonRow> for Season {
         })?;
         let year = SeasonYear::try_new(year)
             .map_err(CompetitionRepositoryError::InvalidStoredSeasonYear)?;
+        let results_revision = u64::try_from(row.results_revision).map_err(|_| {
+            CompetitionRepositoryError::InvalidStoredResultsRevision {
+                value: row.results_revision,
+            }
+        })?;
         Ok(Self::new(
             SeasonId::from_uuid(row.id),
             CompetitionId::from_uuid(row.competition_id),
             year,
-        ))
+        )
+        .with_results_revision(SeasonResultsRevision::from_value(results_revision)))
     }
 }
 
@@ -208,7 +240,7 @@ pub async fn persist_season(
 
     let existing = sqlx::query_as::<_, SeasonRow>(
         r#"
-        SELECT id, competition_id, year
+        SELECT id, competition_id, year, results_revision
         FROM seasons
         WHERE id = $1
         "#,
@@ -220,8 +252,11 @@ pub async fn persist_season(
 
     let persisted = match existing {
         Some(row) => {
-            let existing = row.try_into()?;
-            if existing != season {
+            let existing: Season = row.try_into()?;
+            if existing.id() != season.id()
+                || existing.competition_id() != season.competition_id()
+                || existing.year() != season.year()
+            {
                 return Err(CompetitionRepositoryError::ExistingSeasonConflict { id: season.id() });
             }
             existing
@@ -248,14 +283,21 @@ pub async fn persist_season(
 
             sqlx::query_as::<_, SeasonRow>(
                 r#"
-                INSERT INTO seasons (id, competition_id, year)
-                VALUES ($1, $2, $3)
-                RETURNING id, competition_id, year
+                INSERT INTO seasons (id, competition_id, year, results_revision)
+                VALUES ($1, $2, $3, $4)
+                RETURNING id, competition_id, year, results_revision
                 "#,
             )
             .bind(season.id().as_uuid())
             .bind(season.competition_id().as_uuid())
             .bind(i32::from(season.year().value()))
+            .bind(
+                i64::try_from(season.results_revision().value()).map_err(|_| {
+                    CompetitionRepositoryError::ResultsRevisionOutOfDatabaseRange {
+                        value: season.results_revision().value(),
+                    }
+                })?,
+            )
             .fetch_one(&mut *transaction)
             .await
             .map_err(CompetitionRepositoryError::Database)?
@@ -276,7 +318,7 @@ pub async fn load_season(
 ) -> Result<Option<Season>, CompetitionRepositoryError> {
     sqlx::query_as::<_, SeasonRow>(
         r#"
-        SELECT id, competition_id, year
+        SELECT id, competition_id, year, results_revision
         FROM seasons
         WHERE id = $1
         "#,
@@ -287,4 +329,35 @@ pub async fn load_season(
     .map_err(CompetitionRepositoryError::Database)?
     .map(TryInto::try_into)
     .transpose()
+}
+
+/// Atomically advances a season's source-results revision inside the caller's
+/// transaction.
+///
+/// The caller must commit this transaction together with the verified-result
+/// state and its outbox message. A rollback leaves the prior revision visible,
+/// so an uncommitted result cannot create an observable standings freshness
+/// gap.
+pub async fn advance_season_results_revision(
+    transaction: &mut Transaction<'_, Postgres>,
+    season_id: SeasonId,
+) -> Result<SeasonResultsRevision, CompetitionRepositoryError> {
+    let value: Option<i64> = sqlx::query_scalar(
+        r#"
+        UPDATE seasons
+        SET results_revision = results_revision + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING results_revision
+        "#,
+    )
+    .bind(season_id.as_uuid())
+    .fetch_optional(&mut **transaction)
+    .await
+    .map_err(CompetitionRepositoryError::Database)?;
+
+    let value = value.ok_or(CompetitionRepositoryError::SeasonNotFound { id: season_id })?;
+    let value = u64::try_from(value)
+        .map_err(|_| CompetitionRepositoryError::InvalidStoredResultsRevision { value })?;
+    Ok(SeasonResultsRevision::from_value(value))
 }

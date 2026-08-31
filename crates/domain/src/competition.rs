@@ -167,6 +167,56 @@ impl fmt::Display for SeasonYearError {
 
 impl std::error::Error for SeasonYearError {}
 
+/// Monotonic source revision of a season's accepted verified results.
+///
+/// A season starts at zero. Each committed final or corrected verified result
+/// advances this value once; standings projections later record which source
+/// revision they have computed. The value is deliberately separate from a
+/// projection generation or a match aggregate version.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SeasonResultsRevision(u64);
+
+impl SeasonResultsRevision {
+    pub const fn initial() -> Self {
+        Self(0)
+    }
+
+    pub const fn from_value(value: u64) -> Self {
+        Self(value)
+    }
+
+    pub const fn value(self) -> u64 {
+        self.0
+    }
+
+    pub fn try_next(self) -> Result<Self, SeasonResultsRevisionError> {
+        self.0
+            .checked_add(1)
+            .map(Self)
+            .ok_or(SeasonResultsRevisionError::Overflow { current: self.0 })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SeasonResultsRevisionError {
+    Overflow { current: u64 },
+}
+
+impl fmt::Display for SeasonResultsRevisionError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Overflow { current } => {
+                write!(
+                    formatter,
+                    "season results revision overflow after {current}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for SeasonResultsRevisionError {}
+
 /// Minimal season identity owned by one competition.
 ///
 /// Date intervals, status, stages, and versioned rules are later season
@@ -176,6 +226,7 @@ pub struct Season {
     id: SeasonId,
     competition_id: CompetitionId,
     year: SeasonYear,
+    results_revision: SeasonResultsRevision,
 }
 
 impl Season {
@@ -184,7 +235,13 @@ impl Season {
             id,
             competition_id,
             year,
+            results_revision: SeasonResultsRevision::initial(),
         }
+    }
+
+    pub const fn with_results_revision(mut self, results_revision: SeasonResultsRevision) -> Self {
+        self.results_revision = results_revision;
+        self
     }
 
     pub const fn id(self) -> SeasonId {
@@ -198,6 +255,18 @@ impl Season {
     pub const fn year(self) -> SeasonYear {
         self.year
     }
+
+    pub const fn results_revision(self) -> SeasonResultsRevision {
+        self.results_revision
+    }
+
+    pub fn try_advance_results_revision(
+        &mut self,
+    ) -> Result<SeasonResultsRevision, SeasonResultsRevisionError> {
+        let next = self.results_revision.try_next()?;
+        self.results_revision = next;
+        Ok(next)
+    }
 }
 
 #[cfg(test)]
@@ -206,7 +275,7 @@ mod tests {
 
     use super::{
         Competition, CompetitionId, CompetitionName, CompetitionNameError, Season, SeasonId,
-        SeasonYear, SeasonYearError,
+        SeasonResultsRevision, SeasonResultsRevisionError, SeasonYear, SeasonYearError,
     };
 
     fn competition_id() -> CompetitionId {
@@ -257,10 +326,46 @@ mod tests {
         assert_eq!(season.competition_id(), competition_id());
         assert_eq!(season.year().value(), 2026);
         assert_eq!(season.year().to_string(), "2026");
+        assert_eq!(season.results_revision(), SeasonResultsRevision::initial());
     }
 
     #[test]
     fn season_year_rejects_zero() {
         assert_eq!(SeasonYear::try_new(0), Err(SeasonYearError::Zero));
+    }
+
+    #[test]
+    fn season_results_revision_advances_from_zero() {
+        let mut season = Season::new(
+            season_id(),
+            competition_id(),
+            SeasonYear::try_new(2026).expect("2026 is a valid season year"),
+        );
+
+        assert_eq!(season.results_revision().value(), 0);
+        assert_eq!(
+            season
+                .try_advance_results_revision()
+                .expect("first result revision should be representable")
+                .value(),
+            1
+        );
+        assert_eq!(season.results_revision().value(), 1);
+    }
+
+    #[test]
+    fn season_results_revision_rejects_overflow_without_mutating_state() {
+        let mut season = Season::new(
+            season_id(),
+            competition_id(),
+            SeasonYear::try_new(2026).expect("2026 is a valid season year"),
+        )
+        .with_results_revision(SeasonResultsRevision::from_value(u64::MAX));
+
+        assert_eq!(
+            season.try_advance_results_revision(),
+            Err(SeasonResultsRevisionError::Overflow { current: u64::MAX })
+        );
+        assert_eq!(season.results_revision().value(), u64::MAX);
     }
 }

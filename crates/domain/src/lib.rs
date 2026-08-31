@@ -20,7 +20,7 @@ pub use command::{
 };
 pub use competition::{
     Competition, CompetitionId, CompetitionName, CompetitionNameError, Season, SeasonId,
-    SeasonYear, SeasonYearError,
+    SeasonResultsRevision, SeasonResultsRevisionError, SeasonYear, SeasonYearError,
 };
 pub use directory::{Team, TeamId, TeamName, TeamNameError};
 pub use evidence::{EvidenceReference, EvidenceReferenceError};

@@ -63,7 +63,8 @@ pub use commands::{
     admit_command, mark_command_failed_retryable, verify_processing_lease,
 };
 pub use competition::{
-    CompetitionRepositoryError, load_competition, load_season, persist_competition, persist_season,
+    CompetitionRepositoryError, advance_season_results_revision, load_competition, load_season,
+    persist_competition, persist_season,
 };
 pub use correction_execution::{VoidEventExecutionError, execute_void_event_in_transaction};
 pub use fixtures::{FixtureRepositoryError, load_fixture, persist_fixture};
