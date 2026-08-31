@@ -4,6 +4,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     routing::post,
 };
+use football_application::match_command_fingerprint::fingerprint_c1_command;
 use football_contracts::{
     AdminCommandResponse, CardCommandRequest, CardKind, CommandMetadata, GoalAwardKind,
     GoalCommandRequest, LivePeriodKind, SubstitutionCommandRequest,
@@ -11,21 +12,15 @@ use football_contracts::{
 use football_domain::{
     ActorIdentity, C1LiveAction, C1LiveActionCommand, EventVerificationStatus, GoalAwardType,
     GoalRecordedPayload, MatchId, MatchPeriod, PlayerId, RedCardRecordedPayload,
-    RequestFingerprint, SecondYellowCardRecordedPayload, SubstitutionRecordedPayload, TeamId,
+    SecondYellowCardRecordedPayload, SubstitutionRecordedPayload, TeamId,
     YellowCardRecordedPayload,
 };
-use football_infrastructure::{
-    DatabasePool, MatchCommandDispatch, dispatch_c1_command, require_active_match_operator,
-};
+use football_infrastructure::{DatabasePool, dispatch_c1_command, require_active_match_operator};
 use football_platform::RequestId;
-use serde::Serialize;
 
 use crate::{
     auth::development_actor,
-    command_input::{
-        ParsedCommandMetadata, current_utc_instant, parse_match_id, parse_uuidv7,
-        request_fingerprint,
-    },
+    command_input::{ParsedCommandMetadata, current_utc_instant, parse_match_id, parse_uuidv7},
     command_response::c1_response,
     error::ApiCommandError,
 };
@@ -45,7 +40,6 @@ struct PreparedCommand {
     match_id: MatchId,
     metadata: ParsedCommandMetadata,
     now_utc: football_domain::UtcInstant,
-    dispatch: MatchCommandDispatch,
 }
 
 async fn record_goal(
@@ -58,16 +52,7 @@ async fn record_goal(
     let request = payload
         .map_err(|error| ApiCommandError::invalid_json(request_id, error))?
         .0;
-    let prepared = prepare(
-        &pool,
-        request_id,
-        &match_id,
-        &headers,
-        &request.command,
-        "record_goal",
-        &request,
-    )
-    .await?;
+    let prepared = prepare(&pool, request_id, &match_id, &headers, &request.command).await?;
     let client_id = Some(request.command.client_command_id.as_str());
     let team_id = TeamId::from_uuid(parse_uuidv7(
         &request.team_id,
@@ -111,16 +96,7 @@ async fn record_card(
     let request = payload
         .map_err(|error| ApiCommandError::invalid_json(request_id, error))?
         .0;
-    let prepared = prepare(
-        &pool,
-        request_id,
-        &match_id,
-        &headers,
-        &request.command,
-        "record_card",
-        &request,
-    )
-    .await?;
+    let prepared = prepare(&pool, request_id, &match_id, &headers, &request.command).await?;
     let player_id = PlayerId::from_uuid(parse_uuidv7(
         &request.player_id,
         "player_id",
@@ -157,16 +133,7 @@ async fn record_substitution(
     let request = payload
         .map_err(|error| ApiCommandError::invalid_json(request_id, error))?
         .0;
-    let prepared = prepare(
-        &pool,
-        request_id,
-        &match_id,
-        &headers,
-        &request.command,
-        "record_substitution",
-        &request,
-    )
-    .await?;
+    let prepared = prepare(&pool, request_id, &match_id, &headers, &request.command).await?;
     let client_id = Some(request.command.client_command_id.as_str());
     let team_id = TeamId::from_uuid(parse_uuidv7(
         &request.team_id,
@@ -201,15 +168,12 @@ async fn record_substitution(
     .await
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn prepare<T: Serialize>(
+async fn prepare(
     pool: &DatabasePool,
     request_id: RequestId,
     match_id: &str,
     headers: &HeaderMap,
     metadata: &CommandMetadata,
-    operation: &'static str,
-    request: &T,
 ) -> Result<PreparedCommand, ApiCommandError> {
     let actor = development_actor(headers, request_id)?;
     let client_id = Some(metadata.client_command_id.as_str());
@@ -221,20 +185,11 @@ async fn prepare<T: Serialize>(
         .map_err(|error| {
             ApiCommandError::new(error.to_application_error(), request_id, client_id)
         })?;
-    let fingerprint: RequestFingerprint = request_fingerprint(
-        operation,
-        match_id,
-        actor.admin_user_id(),
-        request,
-        request_id,
-        &metadata.client_command_id,
-    )?;
     Ok(PreparedCommand {
         actor,
         match_id,
         metadata: parsed,
         now_utc,
-        dispatch: parsed.dispatch(fingerprint, now_utc, request_id)?,
     })
 }
 
@@ -267,7 +222,15 @@ async fn execute(
             error.to_string(),
         )
     })?;
-    let result = dispatch_c1_command(pool, prepared.dispatch, &command)
+    let fingerprint = fingerprint_c1_command(
+        prepared.metadata.client_command_id,
+        prepared.metadata.operator_lease_id,
+        &command,
+    );
+    let dispatch = prepared
+        .metadata
+        .dispatch(fingerprint, prepared.now_utc, request_id)?;
+    let result = dispatch_c1_command(pool, dispatch, &command)
         .await
         .map_err(|error| {
             ApiCommandError::new(

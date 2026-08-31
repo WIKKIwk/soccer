@@ -5,6 +5,9 @@ mod arguments;
 mod auth;
 mod config;
 mod error;
+mod live_arguments;
+mod live_commands;
+mod live_error;
 
 use std::env;
 

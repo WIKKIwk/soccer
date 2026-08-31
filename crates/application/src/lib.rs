@@ -7,6 +7,7 @@
 
 pub mod commands;
 pub mod identity;
+pub mod match_command_fingerprint;
 pub mod match_snapshot;
 pub mod ports;
 pub mod realtime_authorization;

@@ -1209,7 +1209,7 @@ accepted/rejected command-audit rows.
 - [ ] `APP-002` Integrate expected version, idempotency, and audit.
 - [x] `API-001` Add lineup, start-period, goal, card, substitution, and finish endpoints.
 - [x] `CLI-001` Create `footballctl` configuration and authentication adapter.
-- [ ] `CLI-002` Add fixture, lineup, start, goal, card, substitution, and finish commands.
+- [x] `CLI-002` Add fixture, lineup, start, goal, card, substitution, and finish commands.
 - [x] `COR-001` Implement correction reason and void event.
 - [x] `COR-002` Implement an effective event-stream builder.
 - [x] `COR-003` Rebuild score after a voided goal.
@@ -1226,8 +1226,9 @@ publishes correction-resolved score/timeline roots in the canonical command
 transaction together with audit, outbox, and terminal result. The canonical
 lifecycle executor now applies the same transaction to schedule, lineup
 submission/confirmation, period transitions, finish, and synchronous
-summary/timeline/lineup publication. HTTP and CLI transport exposure remains
-part of this week's API/CLI work.
+summary/timeline/lineup publication. HTTP and CLI transport adapters are now
+available through the versioned admin API and `footballctl`; clean-database
+acceptance remains gated under APP-001, APP-002, and PIL-001.
 PUB-001 passed on 2026-08-31: the separate public API serves canonical
 match-detail and timeline resources from the correction-resolved event stream,
 with versioned DTOs, stable errors, and an in-repository OpenAPI contract.
@@ -1237,6 +1238,13 @@ cards, and substitutions through the canonical command executors. Strict
 request/response contracts, development identity and active-operator lease
 guards, stable HTTP errors, and the admin OpenAPI surface are tested without
 implicitly mutating a database.
+CLI-002 passed on 2026-08-31: `footballctl` now persists draft lineups and
+dispatches schedule, lineup submit/confirm, period, goal, card, substitution,
+and finish commands through the canonical lifecycle/C1 executors. All command
+identity, optimistic version, clock, and occurrence values are explicit; API
+and CLI share one typed canonical fingerprint. Parser and subprocess tests
+cover the command surface and fail-closed authorization without implicit
+database mutation.
 
 ## Month 3 — Directory and localization hardening
 

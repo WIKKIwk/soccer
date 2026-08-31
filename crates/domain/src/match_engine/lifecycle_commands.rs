@@ -67,6 +67,10 @@ impl MatchLifecycleCommand {
         self.clock_ms
     }
 
+    pub const fn occurred_at(&self) -> UtcInstant {
+        self.occurred_at
+    }
+
     pub const fn actor(&self) -> ActorIdentity {
         self.actor
     }

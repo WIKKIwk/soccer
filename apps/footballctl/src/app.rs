@@ -9,6 +9,7 @@ use crate::{
     auth::{self, AuthorizationScope},
     config::CliRuntimeConfig,
     error::CliError,
+    live_commands,
 };
 use football_domain::{Fixture, OperatorLeaseExpiryPolicy, UtcInstant};
 use football_infrastructure::{
@@ -30,6 +31,7 @@ where
         Some("competition") => run_competition_command(arguments).await,
         Some("season") => run_season_command(arguments).await,
         Some("fixture") => run_fixture_command(arguments).await,
+        Some("lineup") => live_commands::run_lineup(arguments).await,
         Some("match") => run_match_command(arguments).await,
         _ => Err(CliError::Usage),
     }
@@ -71,6 +73,10 @@ async fn run_match_command(arguments: Vec<String>) -> Result<(), CliError> {
         Some("heartbeat") => run_match_heartbeat(arguments).await,
         Some("release") => run_match_release(arguments).await,
         Some("takeover") => run_match_takeover(arguments).await,
+        Some(
+            "schedule" | "lineup-submit" | "lineup-confirm" | "start-first-half" | "end-first-half"
+            | "start-second-half" | "finish" | "goal" | "card" | "substitution",
+        ) => live_commands::run_match(arguments).await,
         _ => Err(CliError::Usage),
     }
 }

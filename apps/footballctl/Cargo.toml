@@ -11,4 +11,4 @@ football-infrastructure = { path = "../../crates/infrastructure" }
 football-platform = { path = "../../crates/platform" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 time = { version = "=0.3.47", default-features = false, features = ["parsing", "std"] }
-uuid = { version = "1", default-features = false, features = ["std"] }
+uuid = { version = "1", default-features = false, features = ["std", "v7"] }

@@ -19,6 +19,11 @@ projections, audits, outbox messages, or terminal results independently.
 Accepted and deterministic rejected commands use one versioned response shape,
 including persisted replay of a prior terminal result.
 
+The API and `footballctl` construct request fingerprints from the same typed
+domain command after transport parsing. Consequently, retrying one logical
+command through either adapter preserves the same idempotency identity instead
+of depending on JSON field order or CLI spelling.
+
 The Week 8 API uses a fail-closed development identity adapter: the exact
 `x-development-authorization: 1` guard and a UUIDv7 development administrator
 header are required, then the adapter verifies the persisted administrator is

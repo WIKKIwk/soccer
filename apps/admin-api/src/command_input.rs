@@ -1,4 +1,3 @@
-use football_application::commands::fingerprint_canonical_bytes;
 use football_contracts::CommandMetadata;
 use football_domain::{
     AggregateVersion, ClientCommandId, ClockMilliseconds, CommandId, EventId, MatchId,
@@ -6,7 +5,6 @@ use football_domain::{
 };
 use football_infrastructure::MatchCommandDispatch;
 use football_platform::RequestId;
-use serde::Serialize;
 use time::{Duration, OffsetDateTime, format_description::well_known::Rfc3339};
 use uuid::{Uuid, Version};
 
@@ -108,41 +106,6 @@ impl ParsedCommandMetadata {
             expires_at,
         ))
     }
-}
-
-#[derive(Serialize)]
-struct FingerprintEnvelope<'a, T> {
-    operation: &'static str,
-    match_id: String,
-    actor_id: String,
-    request: &'a T,
-}
-
-pub(crate) fn request_fingerprint<T: Serialize>(
-    operation: &'static str,
-    match_id: MatchId,
-    actor_id: football_domain::AdminUserId,
-    request: &T,
-    request_id: RequestId,
-    client_command_id: &str,
-) -> Result<RequestFingerprint, ApiCommandError> {
-    serde_json::to_vec(&FingerprintEnvelope {
-        operation,
-        match_id: match_id.to_string(),
-        actor_id: actor_id.to_string(),
-        request,
-    })
-    .map(|bytes| fingerprint_canonical_bytes(&bytes))
-    .map_err(|_| {
-        ApiCommandError::new(
-            football_platform::ApplicationError::new(
-                football_platform::ErrorCode::InternalUnexpected,
-                "the command fingerprint could not be constructed",
-            ),
-            request_id,
-            Some(client_command_id),
-        )
-    })
 }
 
 pub(crate) fn parse_match_id(

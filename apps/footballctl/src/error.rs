@@ -1,4 +1,4 @@
-use crate::{auth, auth::AuthorizationScope};
+use crate::{auth, auth::AuthorizationScope, live_error::LiveCommandError};
 use football_domain::{
     AdminUserId, CompetitionId, CompetitionNameError, FixtureError, FixtureId, MatchId,
     OperatorLeaseExpiryPolicyError, OperatorLeaseId, PersonNameError, PlayerId, SeasonId,
@@ -39,6 +39,7 @@ pub(crate) enum CliError {
     PlayerRepository(PlayerRepositoryError),
     TeamRepository(TeamRepositoryError),
     OperationsRepository(OperatorAssignmentRepositoryError),
+    LiveCommand(LiveCommandError),
     ExistingAdministratorConflict { id: AdminUserId },
     ReadBackMissing { id: AdminUserId },
     ReadBackMismatch { id: AdminUserId },
@@ -80,13 +81,21 @@ impl From<auth::AuthorizationError> for CliError {
 impl fmt::Display for CliError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Usage => formatter.write_str("usage: footballctl admin seed-development ... | footballctl directory seed-teams ... | footballctl directory seed-player ... | footballctl directory import-teams ... | footballctl directory import-player ... | footballctl competition seed ... | footballctl season seed ... | footballctl fixture schedule ... | footballctl match assign ... | footballctl match claim ... | footballctl match heartbeat ... | footballctl match release ... | footballctl match takeover ..."),
+            Self::Usage => formatter.write_str(concat!(
+                "usage: footballctl admin seed-development ...",
+                " | footballctl directory <seed-teams|seed-player|import-teams|import-player> ...",
+                " | footballctl competition seed ... | footballctl season seed ...",
+                " | footballctl fixture schedule ... | footballctl lineup save ...",
+                " | footballctl match <assign|claim|heartbeat|release|takeover> ...",
+                " | footballctl match <schedule|lineup-submit|lineup-confirm|start-first-half|",
+                "end-first-half|start-second-half|goal|card|substitution|finish> ...",
+            )),
             Self::InvalidUuid => formatter.write_str("--id must be a valid UUID"),
             Self::UuidMustBeV7 => formatter.write_str("--id values must be UUIDv7"),
-            Self::SeedNotAuthorized => auth::AuthorizationError::for_scope(
-                AuthorizationScope::DevelopmentAdmin,
-            )
-            .fmt(formatter),
+            Self::SeedNotAuthorized => {
+                auth::AuthorizationError::for_scope(AuthorizationScope::DevelopmentAdmin)
+                    .fmt(formatter)
+            }
             Self::DirectorySeedNotAuthorized => {
                 auth::AuthorizationError::for_scope(AuthorizationScope::Directory).fmt(formatter)
             }
@@ -101,13 +110,18 @@ impl fmt::Display for CliError {
             }
             Self::InvalidCompetitionName(error) => error.fmt(formatter),
             Self::InvalidSeasonYear(error) => error.fmt(formatter),
-            Self::InvalidSeasonYearValue => formatter.write_str("--year must be a positive integer"),
+            Self::InvalidSeasonYearValue => {
+                formatter.write_str("--year must be a positive integer")
+            }
             Self::InvalidKickoff(error) => write!(
                 formatter,
                 "--kickoff must be an RFC3339 timestamp with an explicit offset: {error}"
             ),
             Self::InvalidCurrentTime(error) => {
-                write!(formatter, "current UTC time could not be normalized: {error}")
+                write!(
+                    formatter,
+                    "current UTC time could not be normalized: {error}"
+                )
             }
             Self::InvalidLeaseSeconds => {
                 formatter.write_str("--lease-seconds must be a positive integer")
@@ -125,15 +139,22 @@ impl fmt::Display for CliError {
             Self::PlayerRepository(error) => error.fmt(formatter),
             Self::TeamRepository(error) => error.fmt(formatter),
             Self::OperationsRepository(error) => error.fmt(formatter),
+            Self::LiveCommand(error) => error.fmt(formatter),
             Self::ExistingAdministratorConflict { id } => write!(
                 formatter,
                 "administrator {id} already exists with different data or is inactive"
             ),
             Self::ReadBackMissing { id } => {
-                write!(formatter, "administrator {id} was not readable after insert")
+                write!(
+                    formatter,
+                    "administrator {id} was not readable after insert"
+                )
             }
             Self::ReadBackMismatch { id } => {
-                write!(formatter, "administrator {id} read-back did not match insert")
+                write!(
+                    formatter,
+                    "administrator {id} read-back did not match insert"
+                )
             }
             Self::SameTeamId => formatter.write_str("the two team IDs must be different"),
             Self::PlayerReadBackMissing { id, team_id } => write!(
@@ -178,10 +199,16 @@ impl fmt::Display for CliError {
                 "match assignment {id} read-back did not match persistence"
             ),
             Self::LeaseReadBackMissing { id } => {
-                write!(formatter, "operator lease {id} was not readable after claim")
+                write!(
+                    formatter,
+                    "operator lease {id} was not readable after claim"
+                )
             }
             Self::LeaseReadBackMismatch { id } => {
-                write!(formatter, "operator lease {id} read-back did not match claim")
+                write!(
+                    formatter,
+                    "operator lease {id} read-back did not match claim"
+                )
             }
             Self::HeartbeatReadBackMissing { id } => write!(
                 formatter,
@@ -226,7 +253,14 @@ impl Error for CliError {
             Self::PlayerRepository(error) => Some(error),
             Self::TeamRepository(error) => Some(error),
             Self::OperationsRepository(error) => Some(error),
+            Self::LiveCommand(error) => Some(error),
             _ => None,
         }
+    }
+}
+
+impl From<LiveCommandError> for CliError {
+    fn from(error: LiveCommandError) -> Self {
+        Self::LiveCommand(error)
     }
 }
