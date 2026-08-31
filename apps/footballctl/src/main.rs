@@ -1,5 +1,10 @@
 #![forbid(unsafe_code)]
 
+mod auth;
+mod config;
+
+use auth::AuthorizationScope;
+use config::CliRuntimeConfig;
 use football_application::identity::DevelopmentAdministrator;
 use football_domain::{
     AdminUserId, Competition, CompetitionId, CompetitionName, CompetitionNameError, Fixture,
@@ -9,24 +14,16 @@ use football_domain::{
     TeamNameError, UtcInstant,
 };
 use football_infrastructure::{
-    CompetitionRepositoryError, DatabasePoolConfig, FixtureRepositoryError,
+    CompetitionRepositoryError, DatabasePool, FixtureRepositoryError,
     OperatorAssignmentRepositoryError, PlayerRepositoryError, TeamRepositoryError,
-    claim_operator_lease, connect_database, heartbeat_operator_lease, load_admin_user,
-    load_competition, load_fixture, load_match_assignment, load_operator_lease,
-    load_player_assignment, load_season, load_team, persist_active_admin, persist_competition,
-    persist_fixture, persist_match_assignment, persist_player_for_team, persist_season,
-    persist_two_teams, release_operator_lease, takeover_operator_lease,
+    claim_operator_lease, heartbeat_operator_lease, load_admin_user, load_competition,
+    load_fixture, load_match_assignment, load_operator_lease, load_player_assignment, load_season,
+    load_team, persist_active_admin, persist_competition, persist_fixture,
+    persist_match_assignment, persist_player_for_team, persist_season, persist_two_teams,
+    release_operator_lease, takeover_operator_lease,
 };
-use football_platform::ApplicationConfig;
 use std::{env, error::Error, fmt};
 use uuid::{Uuid, Version};
-
-const SEED_AUTHORIZATION_ENV: &str = "ALLOW_DEVELOPMENT_ADMIN_SEED";
-const SEED_AUTHORIZATION_VALUE: &str = "1";
-const DIRECTORY_SEED_AUTHORIZATION_ENV: &str = "ALLOW_DEVELOPMENT_DIRECTORY_SEED";
-const COMPETITION_SEED_AUTHORIZATION_ENV: &str = "ALLOW_DEVELOPMENT_COMPETITION_SEED";
-const SCHEDULING_SEED_AUTHORIZATION_ENV: &str = "ALLOW_DEVELOPMENT_SCHEDULING_SEED";
-const OPERATIONS_SEED_AUTHORIZATION_ENV: &str = "ALLOW_DEVELOPMENT_OPERATIONS_SEED";
 
 #[tokio::main]
 async fn main() {
@@ -94,12 +91,9 @@ async fn run_match_command(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_admin_seed(arguments: Vec<String>) -> Result<(), CliError> {
     let seed = parse_seed_arguments(arguments)?;
-    require_seed_authorization()?;
+    require_authorization(AuthorizationScope::DevelopmentAdmin)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
 
     if let Some(existing) = load_admin_user(&pool, seed.administrator.id())
         .await
@@ -141,12 +135,9 @@ async fn run_admin_seed(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_team_seed(arguments: Vec<String>) -> Result<(), CliError> {
     let seed = parse_team_arguments(arguments)?;
-    require_directory_seed_authorization()?;
+    require_authorization(AuthorizationScope::Directory)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
 
     let (first, second) = persist_two_teams(&pool, &seed.first, &seed.second)
         .await
@@ -171,12 +162,9 @@ async fn run_team_seed(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_player_seed(arguments: Vec<String>) -> Result<(), CliError> {
     let seed = parse_player_arguments(arguments)?;
-    require_directory_seed_authorization()?;
+    require_authorization(AuthorizationScope::Directory)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
 
     let persisted = persist_player_for_team(&pool, &seed.person, seed.player, seed.team_id)
         .await
@@ -207,12 +195,9 @@ async fn run_player_seed(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_competition_seed(arguments: Vec<String>) -> Result<(), CliError> {
     let seed = parse_competition_arguments(arguments)?;
-    require_competition_seed_authorization()?;
+    require_authorization(AuthorizationScope::Competition)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
 
     let persisted = persist_competition(&pool, &seed.competition)
         .await
@@ -233,12 +218,9 @@ async fn run_competition_seed(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_season_seed(arguments: Vec<String>) -> Result<(), CliError> {
     let seed = parse_season_arguments(arguments)?;
-    require_competition_seed_authorization()?;
+    require_authorization(AuthorizationScope::Competition)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
 
     let persisted = persist_season(&pool, seed.season)
         .await
@@ -259,12 +241,9 @@ async fn run_season_seed(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_fixture_schedule(arguments: Vec<String>) -> Result<(), CliError> {
     let schedule = parse_fixture_schedule_arguments(arguments)?;
-    require_scheduling_seed_authorization()?;
+    require_authorization(AuthorizationScope::Scheduling)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
     let season = load_season(&pool, schedule.season_id)
         .await
         .map_err(CliError::CompetitionRepository)?
@@ -298,12 +277,9 @@ async fn run_fixture_schedule(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_match_assign(arguments: Vec<String>) -> Result<(), CliError> {
     let assignment = parse_match_assignment_arguments(arguments)?;
-    require_operations_seed_authorization()?;
+    require_authorization(AuthorizationScope::Operations)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
 
     let persisted = persist_match_assignment(&pool, &assignment.assignment)
         .await
@@ -330,16 +306,13 @@ async fn run_match_assign(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_match_claim(arguments: Vec<String>) -> Result<(), CliError> {
     let claim = parse_match_claim_arguments(arguments)?;
-    require_operations_seed_authorization()?;
+    require_authorization(AuthorizationScope::Operations)?;
 
     let claimed_at = current_utc_instant()?;
     let expires_at = OperatorLeaseExpiryPolicy::expiry_at(claimed_at, claim.lease_seconds)
         .map_err(CliError::InvalidLeaseExpiryPolicy)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
 
     let persisted = claim_operator_lease(
         &pool,
@@ -370,16 +343,13 @@ async fn run_match_claim(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_match_heartbeat(arguments: Vec<String>) -> Result<(), CliError> {
     let heartbeat = parse_match_heartbeat_arguments(arguments)?;
-    require_operations_seed_authorization()?;
+    require_authorization(AuthorizationScope::Operations)?;
 
     let heartbeat_at = current_utc_instant()?;
     let expires_at = OperatorLeaseExpiryPolicy::expiry_at(heartbeat_at, heartbeat.lease_seconds)
         .map_err(CliError::InvalidLeaseExpiryPolicy)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
 
     let persisted = heartbeat_operator_lease(
         &pool,
@@ -410,12 +380,9 @@ async fn run_match_heartbeat(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_match_release(arguments: Vec<String>) -> Result<(), CliError> {
     let release = parse_match_release_arguments(arguments)?;
-    require_operations_seed_authorization()?;
+    require_authorization(AuthorizationScope::Operations)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
 
     release_operator_lease(
         &pool,
@@ -442,16 +409,13 @@ async fn run_match_release(arguments: Vec<String>) -> Result<(), CliError> {
 
 async fn run_match_takeover(arguments: Vec<String>) -> Result<(), CliError> {
     let takeover = parse_match_takeover_arguments(arguments)?;
-    require_operations_seed_authorization()?;
+    require_authorization(AuthorizationScope::Operations)?;
 
     let claimed_at = current_utc_instant()?;
     let expires_at = OperatorLeaseExpiryPolicy::expiry_at(claimed_at, takeover.lease_seconds)
         .map_err(CliError::InvalidLeaseExpiryPolicy)?;
 
-    let config = ApplicationConfig::from_env().map_err(CliError::Configuration)?;
-    let pool = connect_database(config.database_url(), DatabasePoolConfig::default())
-        .await
-        .map_err(CliError::DatabaseConnection)?;
+    let pool = connect_configured_database().await?;
     let persisted = takeover_operator_lease(
         &pool,
         takeover.match_id,
@@ -917,39 +881,16 @@ fn parse_uuidv7(value: String) -> Result<Uuid, CliError> {
     Ok(uuid)
 }
 
-fn require_seed_authorization() -> Result<(), CliError> {
-    match env::var(SEED_AUTHORIZATION_ENV).ok().as_deref() {
-        Some(SEED_AUTHORIZATION_VALUE) => Ok(()),
-        _ => Err(CliError::SeedNotAuthorized),
-    }
+fn require_authorization(scope: AuthorizationScope) -> Result<(), CliError> {
+    auth::require(scope).map_err(CliError::from)
 }
 
-fn require_directory_seed_authorization() -> Result<(), CliError> {
-    match env::var(DIRECTORY_SEED_AUTHORIZATION_ENV).ok().as_deref() {
-        Some(SEED_AUTHORIZATION_VALUE) => Ok(()),
-        _ => Err(CliError::DirectorySeedNotAuthorized),
-    }
-}
-
-fn require_competition_seed_authorization() -> Result<(), CliError> {
-    match env::var(COMPETITION_SEED_AUTHORIZATION_ENV).ok().as_deref() {
-        Some(SEED_AUTHORIZATION_VALUE) => Ok(()),
-        _ => Err(CliError::CompetitionSeedNotAuthorized),
-    }
-}
-
-fn require_scheduling_seed_authorization() -> Result<(), CliError> {
-    match env::var(SCHEDULING_SEED_AUTHORIZATION_ENV).ok().as_deref() {
-        Some(SEED_AUTHORIZATION_VALUE) => Ok(()),
-        _ => Err(CliError::SchedulingSeedNotAuthorized),
-    }
-}
-
-fn require_operations_seed_authorization() -> Result<(), CliError> {
-    match env::var(OPERATIONS_SEED_AUTHORIZATION_ENV).ok().as_deref() {
-        Some(SEED_AUTHORIZATION_VALUE) => Ok(()),
-        _ => Err(CliError::OperationsSeedNotAuthorized),
-    }
+async fn connect_configured_database() -> Result<DatabasePool, CliError> {
+    let config = CliRuntimeConfig::from_env().map_err(CliError::Configuration)?;
+    config
+        .connect_database()
+        .await
+        .map_err(CliError::DatabaseConnection)
 }
 
 #[derive(Debug)]
@@ -1007,32 +948,41 @@ enum CliError {
     TakeoverReadBackMismatch { id: OperatorLeaseId },
 }
 
+impl From<auth::AuthorizationError> for CliError {
+    fn from(error: auth::AuthorizationError) -> Self {
+        match error.scope() {
+            AuthorizationScope::DevelopmentAdmin => Self::SeedNotAuthorized,
+            AuthorizationScope::Directory => Self::DirectorySeedNotAuthorized,
+            AuthorizationScope::Competition => Self::CompetitionSeedNotAuthorized,
+            AuthorizationScope::Scheduling => Self::SchedulingSeedNotAuthorized,
+            AuthorizationScope::Operations => Self::OperationsSeedNotAuthorized,
+        }
+    }
+}
+
 impl fmt::Display for CliError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Usage => formatter.write_str("usage: footballctl admin seed-development ... | footballctl directory seed-teams ... | footballctl directory seed-player ... | footballctl directory import-teams ... | footballctl directory import-player ... | footballctl competition seed ... | footballctl season seed ... | footballctl fixture schedule ... | footballctl match assign ... | footballctl match claim ... | footballctl match heartbeat ... | footballctl match release ... | footballctl match takeover ..."),
             Self::InvalidUuid => formatter.write_str("--id must be a valid UUID"),
             Self::UuidMustBeV7 => formatter.write_str("--id values must be UUIDv7"),
-            Self::SeedNotAuthorized => write!(
-                formatter,
-                "set {SEED_AUTHORIZATION_ENV}={SEED_AUTHORIZATION_VALUE} to authorize development-admin persistence"
-            ),
-            Self::DirectorySeedNotAuthorized => write!(
-                formatter,
-                "set {DIRECTORY_SEED_AUTHORIZATION_ENV}={SEED_AUTHORIZATION_VALUE} to authorize directory persistence"
-            ),
-            Self::CompetitionSeedNotAuthorized => write!(
-                formatter,
-                "set {COMPETITION_SEED_AUTHORIZATION_ENV}={SEED_AUTHORIZATION_VALUE} to authorize competition and season persistence"
-            ),
-            Self::SchedulingSeedNotAuthorized => write!(
-                formatter,
-                "set {SCHEDULING_SEED_AUTHORIZATION_ENV}={SEED_AUTHORIZATION_VALUE} to authorize fixture scheduling"
-            ),
-            Self::OperationsSeedNotAuthorized => write!(
-                formatter,
-                "set {OPERATIONS_SEED_AUTHORIZATION_ENV}={SEED_AUTHORIZATION_VALUE} to authorize match assignment and claim persistence"
-            ),
+            Self::SeedNotAuthorized => {
+                auth::AuthorizationError::for_scope(AuthorizationScope::DevelopmentAdmin)
+                    .fmt(formatter)
+            }
+            Self::DirectorySeedNotAuthorized => {
+                auth::AuthorizationError::for_scope(AuthorizationScope::Directory).fmt(formatter)
+            }
+            Self::CompetitionSeedNotAuthorized => {
+                auth::AuthorizationError::for_scope(AuthorizationScope::Competition)
+                    .fmt(formatter)
+            }
+            Self::SchedulingSeedNotAuthorized => {
+                auth::AuthorizationError::for_scope(AuthorizationScope::Scheduling).fmt(formatter)
+            }
+            Self::OperationsSeedNotAuthorized => {
+                auth::AuthorizationError::for_scope(AuthorizationScope::Operations).fmt(formatter)
+            }
             Self::InvalidCompetitionName(error) => error.fmt(formatter),
             Self::InvalidSeasonYear(error) => error.fmt(formatter),
             Self::InvalidSeasonYearValue => formatter.write_str("--year must be a positive integer"),

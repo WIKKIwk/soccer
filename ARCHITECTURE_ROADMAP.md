@@ -1133,25 +1133,33 @@ existing databases were not modified.
 - [x] `FND-014` Add request IDs.
 - [x] `FND-015` Add liveness and database readiness.
 - [x] `IDN-001` Define `AdminUserId` and minimal actor identity.
-- [ ] `IDN-002` Persist one active administrator for the vertical slice.
+- [x] `IDN-002` Persist one active administrator for the vertical slice.
 
 Gate: the process fails clearly on invalid configuration and can authenticate or inject one controlled development administrator without bypassing application boundaries.
+Gate status: Passed on 2026-08-14. A dedicated local database was created for
+this increment; the clean migration test passed, and the guarded
+`footballctl admin seed-development` command passed insert, read-back, repeat,
+active-state, and conflicting-identity checks through PostgreSQL.
 
 ## Month 2 — First working match vertical slice
 
 ### Week 5 — Minimal directory, competition, fixture, and lineup
 
 - [x] `DIR-001` Define minimal team identity and name.
-- [ ] `DIR-002` Persist two teams.
+- [x] `DIR-002` Persist two teams.
 - [x] `DIR-003` Define minimal person/player identity.
-- [ ] `DIR-004` Persist players assigned to teams.
+- [x] `DIR-004` Persist players assigned to teams.
 - [x] `CMP-001` Define minimal competition and season.
 - [x] `SCH-001` Define one fixture with home, away, and kickoff.
 - [x] `LIN-001` Define starter and substitute entries.
 - [x] `LIN-002` Validate that one player cannot appear twice.
-- [ ] `LIN-003` Persist and load a draft lineup.
+- [x] `LIN-003` Persist and load a draft lineup.
 
 Gate: one valid fixture with two valid lineups can be created through application services.
+Gate status: Persistence and repository evidence passed on 2026-08-14 on a
+dedicated clean PostgreSQL database. The remaining full Week 5 gate is the
+application-service composition itself; it is not marked complete by these
+repository-level fixtures.
 
 ### Week 6 — Match aggregate and clock
 
@@ -1200,7 +1208,7 @@ accepted/rejected command-audit rows.
 - [ ] `APP-001` Implement load-execute-commit command orchestration.
 - [ ] `APP-002` Integrate expected version, idempotency, and audit.
 - [ ] `API-001` Add lineup, start-period, goal, card, substitution, and finish endpoints.
-- [ ] `CLI-001` Create `footballctl` configuration and authentication adapter.
+- [x] `CLI-001` Create `footballctl` configuration and authentication adapter.
 - [ ] `CLI-002` Add fixture, lineup, start, goal, card, substitution, and finish commands.
 - [x] `COR-001` Implement correction reason and void event.
 - [x] `COR-002` Implement an effective event-stream builder.
@@ -1209,6 +1217,12 @@ accepted/rejected command-audit rows.
 - [ ] `PIL-001` Execute the complete vertical-slice acceptance fixture.
 
 Gate: one operator can run the full match through `footballctl`, correct an event, and read canonical current state through REST.
+Gate status: CLI-001 passed on 2026-08-14. `footballctl` now uses one typed
+configuration/database adapter and centralized development authorization
+boundaries; exact authorization and configuration failure behavior is covered
+by unit and subprocess tests. APP-001 and APP-002 remain open because their
+decision records explicitly leave critical synchronous state, outbox delivery,
+and later audit hardening for subsequent increments.
 
 ## Month 3 — Directory and localization hardening
 
